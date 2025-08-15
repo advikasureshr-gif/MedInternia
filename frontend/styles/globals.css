@@ -1,0 +1,141 @@
+.MuiMenuItem-root {
+  font-size: 1rem;
+  font-weight: 500;
+  padding-top: 1.2em;
+  padding-bottom: 1.2em;
+  transition: background 0.2s, color 0.2s;
+}
+.MuiMenuItem-root:hover {
+  background: #e0eafc;
+  color: #2193b0;
+}
+.youtube-search {
+  border-radius: 24px !important;
+  border: 1px solid #b0c4de !important;
+  background: #fff !important;
+  height: 40px !important;
+  font-size: 1rem !important;
+  box-shadow: 0 2px 8px rgba(33, 147, 176, 0.08);
+  padding-left: 18px !important;
+  padding-right: 48px !important;
+  margin: 0 !important;
+  vertical-align: middle;
+  transition: box-shadow 0.2s;
+}
+.youtube-search:focus {
+  box-shadow: 0 4px 16px rgba(33, 147, 176, 0.12);
+  outline: none;
+}
+/* Custom global styles for MedInternia */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", "Roboto", "Arial", sans-serif;
+  background: linear-gradient(120deg, #e0eafc 0%, #cfdef3 100%);
+  color: #222;
+
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+  color: #1565c0;
+  text-decoration: none;
+  transition: color 0.2s, border-bottom 0.2s;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0 0.5rem;
+}
+a:hover,
+.nav-active {
+  color: #2193b0;
+  border-bottom: 2px solid #2193b0;
+}
+
+/* Navbar button hover */
+.MuiButton-root:hover {
+  background: rgba(33, 147, 176, 0.08);
+  color: #2193b0;
+}
+
+/* Improve color contrast for buttons */
+.MuiButton-root {
+  color: #1565c0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-radius: 8px;
+  margin: 0 0.25rem;
+}
+
+/* Active page indicator for navbar */
+.nav-active {
+  color: #2193b0 !important;
+  border-bottom: 2px solid #2193b0;
+}
+
+/* Consistent font size and spacing */
+body,
+.MuiTypography-root {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Responsive navbar spacing */
+.MuiToolbar-root {
+  min-height: 64px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+a {
+  color: #2193b0;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover {
+  color: #6dd5ed;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.button-primary {
+  background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.button-primary:hover {
+  background: linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%);
+}
+
+.input-bar {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #b0c4de;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .card {
+    padding: 1rem;
+  }
+  .button-primary {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  .input-bar {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+  }
+}
