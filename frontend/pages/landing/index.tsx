@@ -36,87 +36,101 @@ const VisibilityToggle = () => {
   );
 };
 
-const ProfileSidebar = () => (
-  <div
-    style={{
-      backgroundColor: "#fff",
-      borderRadius: 16,
-      padding: 24,
-      boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-      border: "1px solid #f0f4f8",
-      position: "sticky",
-      top: 20,
-      height: "fit-content",
-    }}
-  >
+const ProfileSidebar = () => {
+  const [user, setUser] = React.useState<Doctor | null>(null);
+  React.useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
+    if (!userId) return;
+    import('../../utils/api').then(apiModule => {
+      apiModule.default.get(`/users/${userId}/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => {
+        setUser(res.data.data.user);
+      });
+    });
+  }, []);
+
+  return (
     <div
       style={{
-        background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
-        height: 120,
-        borderRadius: 12,
-        position: "relative",
-        marginBottom: 20,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 24,
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+        border: "1px solid #f0f4f8",
+        position: "sticky",
+        top: 20,
+        height: "fit-content",
       }}
     >
       <div
         style={{
-          width: 60,
-          height: 60,
-          backgroundColor: "rgba(255,255,255,0.2)",
-          borderRadius: "50%",
+          background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
+          height: 120,
+          borderRadius: 12,
+          position: "relative",
+          marginBottom: 20,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Heart size={30} color="white" />
+        <div
+          style={{
+            width: 60,
+            height: 60,
+            backgroundColor: "rgba(255,255,255,0.2)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Heart size={30} color="white" />
+        </div>
       </div>
-    </div>
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        marginTop: -40,
-        marginBottom: 16,
-      }}
-    >
       <div
         style={{
-          width: 80,
-          height: 80,
-          borderRadius: "50%",
-          backgroundColor: "#e0f2fe",
-          border: "4px solid white",
           display: "flex",
-          alignItems: "center",
           justifyContent: "center",
-          fontSize: 24,
-          fontWeight: "bold",
-          color: "#0284c7",
+          marginTop: -40,
+          marginBottom: 16,
         }}
       >
-        EC
+        <div
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: "50%",
+            backgroundColor: "#e0f2fe",
+            border: "4px solid white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 24,
+            fontWeight: "bold",
+            color: "#0284c7",
+          }}
+        >
+          {user ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}` : 'DR'}
+        </div>
       </div>
-    </div>
-    <div style={{ textAlign: "center", marginBottom: 20 }}>
-      <h2
-        style={{
-          fontSize: 20,
-          fontWeight: 700,
-          color: "#1e293b",
-          margin: "0 0 8px 0",
-        }}
-      >
-        Dr. Elias Chen
-      </h2>
-      <p style={{ fontSize: 14, color: "#64748b", margin: 0, lineHeight: 1.5 }}>
-        Cardiologist specializing in interventional procedures and preventive
-        medicine
-      </p>
-    </div>
+      <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <h2
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: "#1e293b",
+            margin: "0 0 8px 0",
+          }}
+        >
+          {user ? `${user.firstName} ${user.lastName}` : 'Loading...'}
+        </h2>
+        <p style={{ fontSize: 14, color: "#64748b", margin: 0, lineHeight: 1.5 }}>
+          {user ? user.specialization : ''}
+        </p>
+      </div>
     <div
       style={{
         display: "flex",
@@ -129,13 +143,17 @@ const ProfileSidebar = () => (
         <div style={{ fontSize: 16, fontWeight: 700, color: "#0ea5e9" }}>
           1,245
         </div>
-        <div style={{ fontSize: 12, color: "#64748b" }}>Followers</div>
+        <a href="/profile/connections" style={{ textDecoration: 'none' }}>
+          <div style={{ fontSize: 12, color: "#64748b", cursor: 'pointer' }}>Followers</div>
+        </a>
       </div>
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: "#10b981" }}>
           980
         </div>
-        <div style={{ fontSize: 12, color: "#64748b" }}>Following</div>
+        <a href="/profile/connections" style={{ textDecoration: 'none' }}>
+          <div style={{ fontSize: 12, color: "#64748b", cursor: 'pointer' }}>Following</div>
+        </a>
       </div>
     </div>
     <div style={{ marginBottom: 24 }}>
@@ -300,7 +318,8 @@ const ProfileSidebar = () => (
       </div>
     </div>
   </div>
-);
+  );
+}
 
 const PostForm = () => {
   const [activeTab, setActiveTab] = useState("Case Study");
@@ -921,15 +940,23 @@ const RecentUpdatesSection = () => (
   </div>
 );
 
+type Doctor = {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  specialization?: string;
+};
+
 const RecommendedConnections = () => {
-  const doctors = [
-    { name: "Dr. Sarah Wong", specialty: "Oncologist" },
-    { name: "Dr. Michael Chen", specialty: "Neurologist" },
-    { name: "Dr. Sarah Johnson", specialty: "Pediatrician" },
-    { name: "Dr. Robert Kim", specialty: "Surgeon" },
-    { name: "Dr. Priya Patel", specialty: "Dermatologist" },
-    { name: "Dr. John Lee", specialty: "Radiologist" },
-  ];
+  const [doctors, setDoctors] = React.useState<Doctor[]>([]);
+  React.useEffect(() => {
+    import('../../utils/api').then(apiModule => {
+      apiModule.default.get('/users/leaderboard?userType=doctor&limit=10')
+        .then(res => {
+          setDoctors(res.data.data.leaderboard || []);
+        });
+    });
+  }, []);
   return (
     <div
       style={{
@@ -967,6 +994,7 @@ const RecommendedConnections = () => {
         {doctors.slice(0, 5).map((doctor, idx) => (
           <React.Fragment key={idx}>
             <div
+              key={doctor._id}
               style={{
                 minWidth: 180,
                 maxWidth: 220,
@@ -997,10 +1025,9 @@ const RecommendedConnections = () => {
                   marginBottom: 8,
                 }}
               >
-                {doctor.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+                {doctor.firstName && doctor.lastName
+                  ? `${doctor.firstName[0]}${doctor.lastName[0]}`
+                  : doctor.firstName || doctor.lastName || "DR"}
               </div>
               <h4
                 style={{
@@ -1010,10 +1037,10 @@ const RecommendedConnections = () => {
                   margin: "0 0 2px 0",
                 }}
               >
-                {doctor.name}
+                Dr. {doctor.firstName} {doctor.lastName}
               </h4>
               <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
-                {doctor.specialty}
+                {doctor.specialization}
               </p>
               <button
                 style={{
@@ -1027,6 +1054,15 @@ const RecommendedConnections = () => {
                   fontWeight: 600,
                   cursor: "pointer",
                   marginTop: 8,
+                }}
+                onClick={async () => {
+                  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+                  await import('../../utils/api').then(apiModule =>
+                    apiModule.default.post('/users/follow', { userId: doctor._id }, {
+                      headers: { Authorization: `Bearer ${token}` }
+                    })
+                  );
+                  // Optionally show feedback or update UI
                 }}
               >
                 Connect

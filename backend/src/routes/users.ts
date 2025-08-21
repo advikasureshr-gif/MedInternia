@@ -8,7 +8,10 @@ import {
   verifyDoctor,
   grantContributorBadge,
   upgradeProfile,
-  awardPointsToIntern
+  awardPointsToIntern,
+  followUser,
+  unfollowUser,
+  getConnections
 } from '../controllers/userController';
 
 const router = Router();
@@ -36,4 +39,14 @@ router.patch('/upgrade-profile', authenticate, upgradeProfile);
 
 // Doctor awards points to intern as recommendation
 router.post('/:internId/award-points', authenticate, awardPointsToIntern);
+
+// Follow a user
+router.post('/follow', authenticate, followUser);
+
+// Unfollow a user
+router.post('/unfollow', authenticate, unfollowUser);
+
+// Get connections (following and followers)
+router.get('/connections', authenticate, getConnections);
+
 export default router;

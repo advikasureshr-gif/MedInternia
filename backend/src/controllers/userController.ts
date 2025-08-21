@@ -439,3 +439,71 @@ export const awardPointsToIntern = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+
+// Follow a user
+export const followUser = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Unauthorized: user not found in request" });
+    }
+    const myId = req.user._id;
+    const { userId } = req.body;
+    if (myId === userId) return res.status(400).json({ success: false, message: "Cannot follow yourself" });
+    const me = await User.findById(myId);
+    const other = await User.findById(userId);
+    if (!me || !other) return res.status(404).json({ success: false, message: "User not found" });
+    if ((me.following ?? []).map((id: any) => id.toString()).includes(userId)) {
+      return res.status(400).json({ success: false, message: "Already following" });
+    }
+    if ((other.followers ?? []).map((id: any) => id.toString()).includes(myId)) {
+      return res.status(400).json({ success: false, message: "Already followed" });
+    }
+    me.following = me.following ?? [];
+    other.followers = other.followers ?? [];
+    me.following.push(userId);
+    other.followers.push(myId as any);
+    await me.save();
+    await other.save();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error following user" });
+  }
+};
+
+// Unfollow a user
+export const unfollowUser = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Unauthorized: user not found in request" });
+    }
+    const myId = req.user._id;
+    const { userId } = req.body;
+    const me = await User.findById(myId);
+    const other = await User.findById(userId);
+    if (!me || !other) return res.status(404).json({ success: false, message: "User not found" });
+    me.following = (me.following ?? []).filter((id: any) => id.toString() !== userId);
+    other.followers = (other.followers ?? []).filter((id: any) => id.toString() !== myId);
+    await me.save();
+    await other.save();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error unfollowing user" });
+  }
+};
+
+// Get connections (following and followers)
+export const getConnections = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Unauthorized: user not found in request" });
+    }
+    const myId = req.user._id;
+    const me = await User.findById(myId)
+      .populate('following', 'firstName lastName profilePicture specialization userType')
+      .populate('followers', 'firstName lastName profilePicture specialization userType');
+    if (!me) return res.status(404).json({ success: false, message: "User not found" });
+    res.json({ success: true, following: me.following, followers: me.followers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching connections" });
+  }
+};

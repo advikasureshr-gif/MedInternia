@@ -2,6 +2,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
+  following?: mongoose.Types.ObjectId[];
+  followers?: mongoose.Types.ObjectId[];
   firstName: string;
   lastName: string;
   email: string;
@@ -82,6 +84,8 @@ const EmergencyContactSchema = new Schema({
 });
 
 const UserSchema = new Schema<IUser>({
+  following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   firstName: {
     type: String,
     required: [true, 'First name is required'],
