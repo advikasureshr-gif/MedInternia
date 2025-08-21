@@ -414,3 +414,48 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Forgot Password: Send OTP
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  // Generate OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore[email + '_reset'] = otp;
+  // Send OTP via email
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+      port: Number(process.env.EMAIL_PORT) || 587,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'MedInternia Password Reset OTP',
+      text: `Your password reset OTP is: ${otp}`
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to send OTP' });
+  }
+};
+
+// Reset Password
+export const resetPassword = async (req: Request, res: Response) => {
+  const { email, otp, newPassword } = req.body;
+  if (!email || !otp || !newPassword) return res.status(400).json({ success: false, message: 'All fields required' });
+  if (newPassword.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+  if (otpStore[email + '_reset'] !== otp) return res.status(400).json({ success: false, message: 'Invalid OTP' });
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  user.password = newPassword;
+  await user.save();
+  delete otpStore[email + '_reset'];
+  return res.json({ success: true, message: 'Password reset successfully' });
+};

@@ -1,68 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Container, Typography, Box, Button, CircularProgress, Alert, Card, Avatar } from '@mui/material';
-import api from '../../utils/api';
+import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 
-export default function Dashboard() {
-  const [profile, setProfile] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+export default function DashboardRedirect() {
   const router = useRouter();
-
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/auth/login');
-      return;
-    }
-    if (!token || token === 'undefined') {
-      router.push('/auth/login');
-      return;
-    }
-    api.get('/auth/profile', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        setProfile(res.data.data.user);
-        if (res.data.data.user && res.data.data.user._id) {
-          localStorage.setItem('userId', res.data.data.user._id);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        setError('Failed to fetch profile');
-        setLoading(false);
-      });
+    router.replace('/landing');
   }, [router]);
-
-  if (loading) return <CircularProgress />;
-  if (error) return <Alert severity="error">{error}</Alert>;
-
-  return (
-    <Container maxWidth="md" sx={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Box sx={{ width: '100%' }}>
-        <Card sx={{ p: 3, boxShadow: 3, borderRadius: 3 }}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Avatar src={profile?.profilePicture} sx={{ width: 64, height: 64 }}>
-              {profile?.firstName?.[0]}
-            </Avatar>
-            <Box>
-              <Typography variant="h4" gutterBottom>
-                Welcome, {profile?.firstName ? profile.firstName : ''}{profile?.lastName ? ` ${profile.lastName}` : ''}!
-              </Typography>
-              <Typography variant="body1">Email: {profile?.email}</Typography>
-              <Typography variant="body1">User Type: {profile?.userType}</Typography>
-              <Typography variant="body2" color="text.secondary">Points: {profile?.points} | Certificates: {profile?.certificatesEarned} | Peer Reviews: {profile?.peerReviewsGiven}</Typography>
-            </Box>
-          </Box>
-          <Box mt={3} display="flex" gap={2}>
-            <Button variant="contained" color="primary" onClick={() => router.push('/cases')}>View Cases</Button>
-            <Button variant="contained" color="secondary" onClick={() => router.push('/certificates')}>My Certificates</Button>
-            <Button variant="contained" color="success" onClick={() => router.push('/peer-reviews')}>Peer Reviews</Button>
-            {/* Change Password button removed as requested */}
-          </Box>
-        </Card>
-      </Box>
-    </Container>
-  );
+  return null;
 }

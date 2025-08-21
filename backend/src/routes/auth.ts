@@ -1,4 +1,4 @@
-import { sendOtp, verifyOtp } from '../controllers/authController';
+import { sendOtp, verifyOtp, forgotPassword, resetPassword } from '../controllers/authController';
 import { Router } from 'express';
 import {
   register,
@@ -10,6 +10,9 @@ import {
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
+// Forgot password routes
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // OTP routes
 router.post('/send-otp', sendOtp);

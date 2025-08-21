@@ -14,6 +14,9 @@ import Grid from "@mui/material/Grid";
 const ProfilePage = () => {
   const [editMode, setEditMode] = useState(false);
   const [userInfo, setUserInfo] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
     institute: "",
     year: "",
     profession: "",
@@ -21,9 +24,49 @@ const ProfilePage = () => {
     address: "",
     bio: "",
     image: "",
-    points: 120,
-    badgeProgress: 70,
+    points: 0,
+    badgeProgress: 0,
+    specialization: "",
+    linkedInProfile: "",
+    githubProfile: "",
   });
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+        if (!token || !userId) return;
+        const res = await fetch(`http://localhost:3000/api/users/${userId}/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (data.success && data.user) {
+          setUserInfo({
+            firstName: data.user.firstName || "",
+            lastName: data.user.lastName || "",
+            email: data.user.email || "",
+            institute: data.user.medicalSchool || "",
+            year: data.user.yearOfStudy || "",
+            profession: data.user.userType || "",
+            internAt: data.user.internAt || "",
+            address: data.user.address?.street || "",
+            bio: data.user.bio || "",
+            image: data.user.profilePicture || "",
+            points: data.user.points || 0,
+            badgeProgress: data.user.profileScore || 0,
+            specialization: data.user.specialization || "",
+            linkedInProfile: data.user.linkedInProfile || "",
+            githubProfile: data.user.githubProfile || "",
+          });
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <Box maxWidth={800} mx="auto" my={4}>

@@ -13,55 +13,87 @@ import {
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { useEffect } from "react";
+import api from "../utils/api";
 
-const notifications = [
-  {
-    id: 1,
-    type: "mention",
-    icon: <ChatBubbleIcon color="primary" />,
-    message: "You were mentioned in a case discussion.",
-    timestamp: "2h ago",
-    group: "Today",
-    unread: true,
-  },
-  {
-    id: 2,
-    type: "system",
-    icon: <CheckCircleIcon color="success" />,
-    message: "Your profile was verified.",
-    timestamp: "5h ago",
-    group: "Today",
-    unread: false,
-  },
-  {
-    id: 3,
-    type: "update",
-    icon: <NotificationsIcon color="info" />,
-    message: "System update completed.",
-    timestamp: "Yesterday",
-    group: "Yesterday",
-    unread: false,
-  },
-  {
-    id: 4,
-    type: "mention",
-    icon: <ChatBubbleIcon color="primary" />,
-    message: "You were mentioned in a webinar chat.",
-    timestamp: "2 days ago",
-    group: "Earlier",
-    unread: true,
-  },
-];
-
-const groupOrder = ["Today", "Yesterday", "Earlier"];
 const filterOptions = ["All", "Unread", "Mentions", "System Updates"];
+const notificationIcons = {
+  mention: <ChatBubbleIcon color="primary" />,
+  system: <CheckCircleIcon color="success" />,
+  update: <NotificationsIcon color="info" />,
+  webinar: <NotificationsIcon color="info" />,
+  reply: <ChatBubbleIcon color="secondary" />,
+};
 
 export default function NotificationsPage() {
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: "mention",
+      icon: <ChatBubbleIcon color="primary" />,
+      message: "You were mentioned in a case discussion.",
+      timestamp: "2h ago",
+      group: "Today",
+      unread: true,
+    },
+    {
+      id: 2,
+      type: "system",
+      icon: <CheckCircleIcon color="success" />,
+      message: "Your profile was verified.",
+      timestamp: "5h ago",
+      group: "Today",
+      unread: false,
+    },
+    {
+      id: 3,
+      type: "update",
+      icon: <NotificationsIcon color="info" />,
+      message: "System update completed.",
+      timestamp: "Yesterday",
+      group: "Yesterday",
+      unread: false,
+    },
+    {
+      id: 4,
+      type: "mention",
+      icon: <ChatBubbleIcon color="primary" />,
+      message: "You were mentioned in a webinar chat.",
+      timestamp: "2 days ago",
+      group: "Earlier",
+      unread: true,
+    },
+  ]);
   const [filter, setFilter] = useState("All");
   const [allRead, setAllRead] = useState(false);
 
+  useEffect(() => {
+    api.get("/notifications")
+      .then(res => {
+        type NotificationType = keyof typeof notificationIcons;
+        const now = new Date();
+        const notifList = res.data.notifications.map((n: { type: NotificationType; [key: string]: any }) => {
+          const created = new Date(n.createdAt);
+          let group = "Earlier";
+          const today = now.toDateString();
+          const yesterday = new Date(now.getTime() - 86400000).toDateString();
+          if (created.toDateString() === today) group = "Today";
+          else if (created.toDateString() === yesterday) group = "Yesterday";
+          return {
+            ...n,
+            icon: notificationIcons[n.type] || <NotificationsIcon color="info" />,
+            unread: !n.isRead,
+            timestamp: created.toLocaleString(),
+            group,
+          };
+        });
+        setNotifications(prev => [...prev, ...notifList]);
+      })
+      .catch(() => setNotifications(prev => [...prev]));
+  }, []);
+
   // Filter logic
-  const filtered = notifications.filter((n) => {
+  const filtered = notifications.filter((n: any) => {
     if (filter === "All") return true;
     if (filter === "Unread") return n.unread;
     if (filter === "Mentions") return n.type === "mention";
@@ -69,14 +101,11 @@ export default function NotificationsPage() {
       return n.type === "system" || n.type === "update";
     return true;
   });
-
-  // Group notifications
+  // Group notifications by date
+  const groupOrder = ["Today", "Yesterday", "Earlier"];
   const grouped = groupOrder
-    .map((group) => ({
-      group,
-      items: filtered.filter((n) => n.group === group),
-    }))
-    .filter((g) => g.items.length > 0);
+    .map(group => ({ group, items: filtered.filter(n => n.group === group) }))
+    .filter(g => g.items.length > 0);
 
   return (
     <Container maxWidth="sm" sx={{ py: { xs: 2, md: 4 } }}>
@@ -98,7 +127,12 @@ export default function NotificationsPage() {
             fontWeight: 600,
             background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
           }}
-          onClick={() => setAllRead(true)}
+          onClick={async () => {
+            setAllRead(true);
+            try {
+              await api.post("/notifications/mark-all-read");
+            } catch {}
+          }}
         >
           Mark All as Read
         </Button>
@@ -128,9 +162,9 @@ export default function NotificationsPage() {
             {group.group}
           </Typography>
           <Stack spacing={2}>
-            {group.items.map((n) => (
+            {group.items.map((n: any) => (
               <Paper
-                key={n.id}
+                key={n._id || n.id}
                 elevation={3}
                 sx={{
                   p: 2,
@@ -141,11 +175,20 @@ export default function NotificationsPage() {
                   gap: 2,
                   background: n.unread && !allRead ? "#e3f2fd" : "#fff",
                   transition: "box-shadow 0.2s, transform 0.2s",
-                  cursor: "pointer",
-                  "&:hover": {
+                  cursor: n.link ? "pointer" : "default",
+                  "&:hover": n.link ? {
                     boxShadow: "0 6px 24px #2193b044",
                     transform: "scale(1.02)",
-                  },
+                  } : {},
+                }}
+                onClick={async () => {
+                  if (n.link) window.location.href = n.link;
+                  if (n.unread) {
+                    setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, unread: false } : notif));
+                    try {
+                      await api.post(`/notifications/mark-read`, { id: n._id });
+                    } catch {}
+                  }
                 }}
               >
                 <Box sx={{ fontSize: 28 }}>{n.icon}</Box>

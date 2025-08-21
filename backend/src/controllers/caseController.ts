@@ -39,6 +39,18 @@ export const replyToComment = async (req: AuthRequest, res: Response) => {
     caseDoc.comments.push(reply as any);
     parentComment.replies.push(reply._id);
     await caseDoc.save();
+
+    // Send notification to comment author if not replying to own comment
+    if (parentComment.author.toString() !== user._id.toString()) {
+      const Notification = require('../models/Notification').default;
+      await Notification.create({
+        recipient: parentComment.author,
+        message: `Someone replied to your comment: "${parentComment.content}"`,
+        type: 'reply',
+        link: `/cases/${caseId}`
+      });
+    }
+
     res.status(201).json({ success: true, message: 'Reply added successfully', data: { reply } });
   } catch (error) {
     console.error('Reply to comment error:', error);

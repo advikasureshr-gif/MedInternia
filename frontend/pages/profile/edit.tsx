@@ -1,4 +1,5 @@
 import React, { useState, FormEvent, ChangeEvent } from "react";
+import { useRouter } from 'next/router';
 import {
   Box,
   Typography,
@@ -114,11 +115,12 @@ const theme = createTheme({
 });
 
 export default function EditProfilePage() {
-  // State to manage form data, initialized with placeholder values
+  const router = useRouter();
+  // State to manage form data, initialized empty and filled from backend
   const [form, setForm] = useState<ProfileFormData>({
-    name: "Dr. Me",
-    bio: "Passionate about medicine.",
-    email: "me@medinternia.com",
+    name: "",
+    bio: "",
+    email: "",
     phone: "",
     address: {
       street: "",
@@ -126,7 +128,7 @@ export default function EditProfilePage() {
       state: "",
       zip: "",
     },
-    image: "https://placehold.co/100x100/42a5f5/ffffff?text=User",
+    image: "",
     role: "Doctor",
     medicalSchool: "",
     graduationYear: "",
@@ -137,6 +139,51 @@ export default function EditProfilePage() {
     hospitalAffiliation: "",
     yearsOfExperience: "",
   });
+
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+        if (!token || !userId) return;
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+        const res = await fetch(`${API_BASE_URL}/users/${userId}/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (data.success && data.data && data.data.user) {
+          const user = data.data.user;
+          setForm({
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            bio: user.bio || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            address: {
+              street: user.address?.street || "",
+              city: user.address?.city || "",
+              state: user.address?.state || "",
+              zip: user.address?.zipCode || "",
+            },
+            image: user.profilePicture || "https://placehold.co/100x100/42a5f5/ffffff?text=User",
+            role: user.userType === "doctor" ? "Doctor" : user.userType === "intern" ? "Intern" : "Patient",
+            medicalSchool: user.medicalSchool || "",
+            graduationYear: user.yearOfStudy || "",
+            specialtiesOfInterest: user.interests || "",
+            linkedInUrl: user.linkedInProfile || "",
+            medicalLicenseNumber: user.licenseNumber || "",
+            specialtyExpertise: user.specialization || "",
+            hospitalAffiliation: user.hospitalAffiliation || "",
+            yearsOfExperience: user.experience || "",
+          });
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchProfile();
+  }, []);
 
   // State to manage UI feedback and dialogs
   const [loading, setLoading] = useState<boolean>(false);
@@ -475,7 +522,12 @@ export default function EditProfilePage() {
               </Typography>
             </Box>
             <Stack spacing={2}>
-                <Button variant="outlined" color="primary" fullWidth>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  fullWidth
+                  onClick={() => router.push('/auth/change-password')}
+                >
                   Change Password
                 </Button>
             </Stack>

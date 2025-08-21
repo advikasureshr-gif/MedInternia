@@ -12,6 +12,7 @@ import certificateRoutes from './certificates';
 import webinarRoutes from './webinars';
 import userRoutes from './users';
 import integrationRoutes from './integration';
+import notificationRoutes from './notifications';
 
 const router = Router();
 
@@ -85,6 +86,9 @@ router.use('/certificates', certificateRoutes);
 
 // Webinar routes
 router.use('/webinars', webinarRoutes);
+
+// Notification routes
+router.use('/notifications', notificationRoutes);
 
 // Integration routes (LinkedIn, GitHub)
 router.use('/integration', integrationRoutes);

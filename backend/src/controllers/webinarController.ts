@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import Webinar from '../models/Webinar';
+import Notification from '../models/Notification';
 import User from '../models/User';
 
 // Create webinar
@@ -44,6 +45,19 @@ export const createWebinar = async (req: AuthRequest, res: Response) => {
 
     await webinar.save();
     await webinar.populate('host', 'firstName lastName specialization isVerifiedDoctor');
+
+    // Ensure webinar.host is a populated document
+    const host = webinar.host as any;
+
+    // Notify all interns about the new webinar
+    const interns = await User.find({ userType: 'intern' });
+    const notifications = interns.map(intern => ({
+      recipient: intern._id,
+      message: `New webinar scheduled: ${webinar.title} by Dr. ${host.firstName} ${host.lastName}`,
+      type: 'webinar',
+      link: `/webinars/${webinar._id}`
+    }));
+    await Notification.insertMany(notifications);
 
     res.status(201).json({
       success: true,
