@@ -9,7 +9,6 @@ export default function CertificateDetail() {
   const [certificate, setCertificate] = useState<any>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-
   
   useEffect(() => {
     if (!id) return;
