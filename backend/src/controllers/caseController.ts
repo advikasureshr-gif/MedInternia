@@ -3,6 +3,125 @@ import Case, { ICase } from '../models/Case';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 
+// Reply to a comment
+export const replyToComment = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user as { _id: string; userType?: string };
+    const { caseId, commentId } = req.params;
+    const { content } = req.body;
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Reply content is required' });
+    }
+    const caseDoc = await Case.findById(caseId);
+    if (!caseDoc) return res.status(404).json({ success: false, message: 'Case not found' });
+    const parentComment = caseDoc.comments.find((c: any) => c._id?.toString() === commentId);
+    if (!parentComment) return res.status(404).json({ success: false, message: 'Comment not found' });
+    // Prevent duplicate replies
+    if (caseDoc.comments.some((c: any) => c.author.toString() === user._id.toString() && c.content === content.trim() && c.replyTo?.toString() === (parentComment._id as string | { toString(): string }).toString())) {
+      return res.status(409).json({ success: false, message: 'Duplicate reply detected' });
+    }
+    // Create reply as a plain object with manual _id assignment
+    const mongoose = require('mongoose');
+    const reply = {
+      author: user._id,
+      content: content.trim(),
+      likes: [],
+      ratedBy: [],
+      replies: [],
+      replyTo: parentComment._id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      _id: new mongoose.Types.ObjectId()
+    };
+    caseDoc.comments.push(reply as any);
+    parentComment.replies.push(reply._id);
+    await caseDoc.save();
+    res.status(201).json({ success: true, message: 'Reply added successfully', data: { reply } });
+  } catch (error) {
+    console.error('Reply to comment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+// Like a comment
+export const likeComment = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user as { _id: string | { toString(): string } };
+    const { caseId, commentId } = req.params;
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+    const caseDoc = await Case.findById(caseId);
+    if (!caseDoc) return res.status(404).json({ success: false, message: 'Case not found' });
+    const comment = caseDoc.comments.find((c: any) => c._id?.toString() === commentId);
+    if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
+    // Toggle like
+    const mongoose = require('mongoose');
+    const userIdObj = typeof user._id === 'string' ? new mongoose.Types.ObjectId(user._id) : user._id;
+    const likeIndex = comment.likes.findIndex((uid: any) => uid.toString() === userIdObj.toString());
+    let liked = false;
+    if (likeIndex > -1) {
+      // Unlike
+      comment.likes.splice(likeIndex, 1);
+      liked = false;
+    } else {
+      // Like
+      comment.likes.push(userIdObj);
+      liked = true;
+    }
+    await caseDoc.save();
+    res.json({ success: true, message: liked ? 'Comment liked' : 'Comment unliked', data: { likes: comment.likes.length, liked } });
+  } catch (error) {
+    console.error('Like comment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Rate a comment
+export const rateComment = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user as { _id: string | { toString(): string } };
+    const { caseId, commentId } = req.params;
+    const { rating } = req.body;
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
+    }
+    const caseDoc = await Case.findById(caseId);
+    if (!caseDoc) return res.status(404).json({ success: false, message: 'Case not found' });
+    const comment = caseDoc.comments.find((c: any) => c._id?.toString() === commentId);
+    if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
+    // Toggle rating
+    const mongoose = require('mongoose');
+    const userIdObj = typeof user._id === 'string' ? new mongoose.Types.ObjectId(user._id) : user._id;
+    const rateIndex = comment.ratedBy.findIndex((uid: any) => uid.toString() === userIdObj.toString());
+    let rated = false;
+    if (rateIndex > -1) {
+      // Unrate
+      comment.ratedBy.splice(rateIndex, 1);
+      // Recalculate average rating
+      if (comment.ratedBy.length === 0) comment.rating = undefined;
+      else comment.rating = Math.round((comment.rating ?? 0) * comment.ratedBy.length / (comment.ratedBy.length + 1));
+      rated = false;
+    } else {
+      // Rate
+      comment.ratedBy.push(userIdObj);
+      if (!comment.rating) comment.rating = rating;
+      else comment.rating = Math.round(((comment.rating * (comment.ratedBy.length - 1)) + rating) / comment.ratedBy.length);
+      rated = true;
+    }
+    await caseDoc.save();
+    res.json({ success: true, message: rated ? 'Comment rated' : 'Comment unrated', data: { rating: comment.rating, ratedBy: comment.ratedBy.length, rated } });
+  } catch (error) {
+    console.error('Rate comment error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 // Create a new case (Doctor only)
 export const createCase = async (req: AuthRequest, res: Response) => {
   try {
@@ -246,7 +365,7 @@ export const getCaseById = async (req: AuthRequest, res: Response) => {
 // Update case (Doctor who created it only)
 export const updateCase = async (req: AuthRequest, res: Response) => {
   try {
-    const user = req.user;
+    const user = req.user as { _id: string; userType: string };
     const { id } = req.params;
 
     if (!user) {
@@ -357,65 +476,43 @@ export const deleteCase = async (req: AuthRequest, res: Response) => {
 // Add comment to case
 export const addComment = async (req: AuthRequest, res: Response) => {
   try {
-    const user = req.user;
+    const user = req.user as { _id: string | { toString(): string }; userType?: string };
     const { id } = req.params;
-    const { content } = req.body;
+    const { content, replyTo } = req.body;
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
-
     if (!content || content.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Comment content is required'
-      });
+      return res.status(400).json({ success: false, message: 'Comment content is required' });
     }
-
     const caseData = await Case.findById(id);
-
     if (!caseData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Case not found'
-      });
+      return res.status(404).json({ success: false, message: 'Case not found' });
     }
-
     if (!caseData.isActive) {
-      return res.status(404).json({
-        success: false,
-        message: 'Case is no longer available'
-      });
+      return res.status(404).json({ success: false, message: 'Case is no longer available' });
     }
-
-    const newComment = {
+    // Prevent duplicate comments by same user with same content
+    if (caseData.comments.some((c: any) => c.author.toString() === user._id.toString() && c.content === content.trim())) {
+      return res.status(409).json({ success: false, message: 'Duplicate comment detected' });
+    }
+    const newComment: any = {
       author: user._id as any,
-      content: content.trim()
+      content: content.trim(),
+      likes: [],
+      ratedBy: [],
+      replies: [],
+      replyTo: replyTo ? replyTo : undefined
     };
-
-    caseData.comments.push(newComment as any);
+    caseData.comments.push(newComment);
     await caseData.save();
-
     await caseData.populate('comments.author', 'firstName lastName userType');
-
     const addedComment = caseData.comments[caseData.comments.length - 1];
-
-    res.status(201).json({
-      success: true,
-      message: 'Comment added successfully',
-      data: {
-        comment: addedComment
-      }
-    });
+    res.status(201).json({ success: true, message: 'Comment added successfully', data: { comment: addedComment } });
   } catch (error) {
     console.error('Add comment error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 

@@ -4,10 +4,10 @@ export interface IComment extends Document {
   author: mongoose.Types.ObjectId;
   content: string;
   replies: IComment[];
-  parentComment?: mongoose.Types.ObjectId;
+  replyTo?: mongoose.Types.ObjectId; // Reference to the comment being replied to (for WhatsApp-style)
   likes: mongoose.Types.ObjectId[];
-  rating?: number; // Rating given by doctor to intern comments (1-5)
-  ratedBy?: mongoose.Types.ObjectId; // Doctor who gave the rating
+  ratedBy: mongoose.Types.ObjectId[]; // Array of users who rated
+  rating?: number; // Average rating (optional)
   pinned?: boolean; // Indicates if the comment is pinned
   createdAt: Date;
   updatedAt: Date;
@@ -68,7 +68,7 @@ const CommentSchema = new Schema<IComment>({
     type: Schema.Types.ObjectId,
     ref: 'Comment'
   }],
-  parentComment: {
+  replyTo: {
     type: Schema.Types.ObjectId,
     ref: 'Comment'
   },
@@ -81,10 +81,10 @@ const CommentSchema = new Schema<IComment>({
     min: [1, 'Rating must be at least 1'],
     max: [5, 'Rating cannot exceed 5']
   },
-  ratedBy: {
+  ratedBy: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
-  },
+  }],
   pinned: {
     type: Boolean,
     default: false

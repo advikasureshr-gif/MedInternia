@@ -17,6 +17,9 @@ import {
   getPinnedComments,
   toggleRepostPermission,
   repostCase,
+  replyToComment,
+  likeComment,
+  rateComment
 } from '../controllers/caseController';
 import { authenticate } from '../middleware/auth';
 
@@ -34,6 +37,9 @@ router.delete('/:id', authenticate, deleteCase);
 
 // Interactive routes (all authenticated users)
 router.post('/:id/comments', authenticate, addComment);
+router.post('/:caseId/comments/:commentId/reply', authenticate, replyToComment);
+router.post('/:caseId/comments/:commentId/like', authenticate, likeComment);
+router.post('/:caseId/comments/:commentId/rate', authenticate, rateComment);
 router.post('/:id/like', authenticate, toggleLike);
 
 // Follow-up routes
