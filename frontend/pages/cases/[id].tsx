@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Container, Typography, Box, CircularProgress, Alert, Button, TextField, Menu, MenuItem, IconButton, Stack, Collapse } from '@mui/material';
+import { Container, Typography, Box, CircularProgress, Alert, Button, TextField, IconButton, Stack, Collapse } from '@mui/material';
+import { MessageCircleReply, Pin } from 'lucide-react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
@@ -8,9 +9,9 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { motion } from 'framer-motion';
 import api from '../../utils/api';
 
-export default function CaseDetail() {
+export default function CaseDiscussion({ id: propId, modalMode, hideDescription }: { id?: string, modalMode?: boolean, hideDescription?: boolean }) {
   const router = useRouter();
-  const { id } = router.query;
+  const id = propId || router.query.id;
   const [caseData, setCaseData] = useState<any>(null);
   const [discussions, setDiscussions] = useState<any[]>([]);
   const [pinned, setPinned] = useState<any[]>([]);
@@ -144,8 +145,10 @@ export default function CaseDetail() {
   return (
     <Container maxWidth="sm">
       <Box sx={{ my: 4 }}>
-        <Typography variant="h4" gutterBottom>{caseData.title}</Typography>
-        <Typography variant="body1">{caseData.description}</Typography>
+        {!hideDescription && <>
+          <Typography variant="h4" gutterBottom>{caseData.title}</Typography>
+          <Typography variant="body1">{caseData.description}</Typography>
+        </>}
         <Box sx={{ mt: 3, bgcolor: '#e3f2fd', borderRadius: 4, p: 2, boxShadow: 2, pt: 6 }}>
           <Typography variant="h6" sx={{ mb: 2, color: '#1976d2', fontWeight: 700 }}>Pinned Discussions</Typography>
           <Box sx={{ maxHeight: 200, overflowY: 'auto', px: 1, mb: 2 }}>
@@ -211,9 +214,16 @@ export default function CaseDetail() {
                         <Typography variant="caption" sx={{ ml: 1, color: '#90caf9' }}>
                           {c.createdAt ? new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </Typography>
-                        <IconButton size="small" sx={{ ml: 1, p: 0.5 }} onClick={e => { setAnchorEl(e.currentTarget); setSelectedComment({ comment: c, idx, pinned: true }); }}>
-                          <MoreVertIcon sx={{ fontSize: 18, color: isMe ? '#fff' : '#1976d2' }} />
+                        {/* Reply icon (lucide, always visible) */}
+                        <IconButton size="small" sx={{ ml: 1, p: 0.5, color: '#1976d2', '&:hover': { bgcolor: '#e3f2fd' }, borderRadius: 2 }} onClick={() => handleReply(c)}>
+                          <MessageCircleReply size={20} strokeWidth={2.2} />
                         </IconButton>
+                        {/* Pin icon for owner, visible */}
+                        {isAuthor && !c.pinned && (
+                          <IconButton size="small" sx={{ ml: 1, p: 0.5, color: '#1976d2', '&:hover': { bgcolor: '#e3f2fd' } }} onClick={() => handlePin(c._id)}>
+                            <Pin size={20} strokeWidth={2.2} />
+                          </IconButton>
+                        )}
                       </Box>
                     </Box>
                   </Box>
@@ -279,15 +289,17 @@ export default function CaseDetail() {
                           <Typography variant="caption" sx={{ ml: 1, color: '#90caf9' }}>
                             {c.createdAt ? new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                           </Typography>
+                          {/* Reply icon (lucide, always visible) */}
+                          <IconButton size="small" sx={{ ml: 1, p: 0.5, color: '#1976d2', '&:hover': { bgcolor: '#e3f2fd' }, borderRadius: 2 }} onClick={() => handleReply(c)}>
+                            <MessageCircleReply size={20} strokeWidth={2.2} />
+                          </IconButton>
                           {/* Pin icon for owner, visible */}
                           {isAuthor && !c.pinned && (
-                            <IconButton size="small" sx={{ ml: 1, p: 0.5 }} onClick={() => handlePin(c._id)}>
-                              <PushPinIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                            <IconButton size="small" sx={{ ml: 1, p: 0.5, color: '#1976d2', '&:hover': { bgcolor: '#e3f2fd' }, borderRadius: 2 }} onClick={() => handlePin(c._id)}>
+                              <Pin size={20} strokeWidth={2.2} />
                             </IconButton>
                           )}
-                          <IconButton size="small" sx={{ ml: 1, p: 0.5 }} onClick={e => { setAnchorEl(e.currentTarget); setSelectedComment({ comment: c, idx, pinned: false }); }}>
-                            <MoreVertIcon sx={{ fontSize: 18, color: isMe ? '#fff' : '#1976d2' }} />
-                          </IconButton>
+                          {/* Remove MoreVert menu for main actions */}
                           {/* Like and rate buttons */}
                           {/* Like button with active state */}
                           <IconButton size="small" sx={{ ml: 1, p: 0.5 }} onClick={() => handleLike(c._id)}>
@@ -363,14 +375,7 @@ export default function CaseDetail() {
                 );
               })}
           </Box>
-          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-            <MenuItem onClick={() => { setAnchorEl(null); handleReply(selectedComment?.comment); }}>Reply</MenuItem>
-            {/* Only show pin for owner and for top-level (not already pinned) discussions */}
-            {isAuthor && selectedComment && !selectedComment.pinned && (
-              <MenuItem onClick={() => { setAnchorEl(null); handlePin(selectedComment?.comment._id); }}>Pin</MenuItem>
-            )}
-            <MenuItem onClick={() => { setAnchorEl(null); }}>Report</MenuItem>
-          </Menu>
+          {/* Removed MoreVert menu for main actions */}
           {/* Reply input bar */}
           {replyTo && (
             <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', bgcolor: '#e3f2fd', borderRadius: 3, boxShadow: 1, px: 2, py: 1 }}>

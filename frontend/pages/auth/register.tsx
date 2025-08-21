@@ -4,7 +4,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } f
 import { Container, Typography, TextField, Button, Box, Alert, MenuItem, Card, Avatar, Fade, Grow, Stack, LinearProgress } from '@mui/material';
 import api from '../../utils/api';
 import { useRouter } from 'next/router';
-import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
+
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -171,70 +171,60 @@ export default function Register() {
       py: 6
     }}>
       <Fade in timeout={900}>
-        <Box>
-          <Card elevation={8} sx={{ p: 4, borderRadius: 5, minWidth: 370, maxWidth: 450, width: '100%', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.main', width: 64, height: 64, mb: 1, boxShadow: 3 }}>
-                <MedicalServicesIcon fontSize="large" />
-              </Avatar>
-              <Typography variant="h4" fontWeight={700} color="primary.main" gutterBottom>
-                Join MedInternia
-              </Typography>
-              <Typography variant="subtitle1" color="text.secondary" align="center" sx={{ mb: 1 }}>
-                Create your account and start your journey in the medical community.
-              </Typography>
-            </Box>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            <Box sx={{ mb: 2 }}>
-              <LinearProgress variant="determinate" value={getProgress()} sx={{ height: 8, borderRadius: 5 }} />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', textAlign: 'right' }}>{getProgress()}% complete</Typography>
-            </Box>
-            <form onSubmit={step === 1 ? handleNext : handleSubmit}>
-              <Grow in timeout={700}>
-                <Box>
-                  {step === 1 && (
-                    <>
-                      <TextField label="First Name" name="firstName" fullWidth margin="normal" value={form.firstName} onChange={handleChange} required autoFocus />
-                      <TextField label="Last Name" name="lastName" fullWidth margin="normal" value={form.lastName} onChange={handleChange} required />
-                      <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                        <TextField label="Email" name="email" type="email" fullWidth margin="normal" value={form.email} onChange={handleEmailChange} required sx={{ flex: 1 }} />
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          sx={{ mb: 1, ml: 2, py: 1.3, fontWeight: 700, fontSize: '1.1rem', borderRadius: 3, boxShadow: '0 4px 20px 0 rgba(31, 38, 135, 0.10)', transition: 'all 0.2s', minWidth: '90px', height: '56px', '&:hover': { background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)', transform: 'scale(1.03)', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' } }}
-                          disabled={!form.email}
-                          onClick={() => {}}
-                        >
-                          Verify
-                        </Button>
-                      </Box>
-                      <TextField label="Password" name="password" type="password" fullWidth margin="normal" value={form.password} onChange={handleChange} required />
-                      <TextField select label="User Type" name="userType" fullWidth margin="normal" value={form.userType} onChange={handleChange} required>
-                        <MenuItem value="patient">Patient</MenuItem>
-                        <MenuItem value="doctor">Doctor</MenuItem>
-                        <MenuItem value="intern">Intern</MenuItem>
-                      </TextField>
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        sx={{ mt: 2, py: 1.3, fontWeight: 700, fontSize: '1.1rem', borderRadius: 3, boxShadow: '0 4px 20px 0 rgba(31, 38, 135, 0.10)', transition: 'all 0.2s', '&:hover': { background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)', transform: 'scale(1.03)', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' } }}
-                        // Next button is always enabled now
-                      >
-                        Next
+        <Card elevation={8} sx={{ p: 4, borderRadius: 5, minWidth: 370, maxWidth: 450, width: '100%', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+            <Avatar sx={{ bgcolor: 'white', width: 80, height: 80, mb: 1, boxShadow: 3 }}>
+              <img src="/med-internia-logo.jpg" alt="MedInternia Logo" style={{ width: '100%', height: '100%' }} />
+            </Avatar>
+            <Typography variant="h4" fontWeight={700} color="primary.main" gutterBottom>
+              Join MedInternia
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary" align="center" sx={{ mb: 1 }}>
+              Create your account and start your journey in the medical community.
+            </Typography>
+          </Box>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {/* Loader removed as requested */}
+          <form onSubmit={step === 1 ? handleNext : handleSubmit}>
+            <Grow in timeout={700}>
+              <Box>
+                {step === 1 && (
+                  <>
+                    <TextField label="First Name" name="firstName" fullWidth margin="normal" value={form.firstName} onChange={handleChange} required autoFocus />
+                    <TextField label="Last Name" name="lastName" fullWidth margin="normal" value={form.lastName} onChange={handleChange} required />
+                    <TextField label="Email" name="email" type="email" fullWidth margin="normal" value={form.email} onChange={handleChange} required />
+                    <TextField label="Password" name="password" type="password" fullWidth margin="normal" value={form.password} onChange={handleChange} required />
+                    <TextField select label="User Type" name="userType" fullWidth margin="normal" value={form.userType} onChange={handleChange} required>
+                      <MenuItem value="patient">Patient</MenuItem>
+                      <MenuItem value="doctor">Doctor</MenuItem>
+                      <MenuItem value="intern">Intern</MenuItem>
+                    </TextField>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      sx={{ mt: 2, py: 1.3, fontWeight: 700, fontSize: '1.1rem', borderRadius: 3, boxShadow: '0 4px 20px 0 rgba(31, 38, 135, 0.10)', transition: 'all 0.2s', '&:hover': { background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)', transform: 'scale(1.03)', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' } }}
+                    >
+                      Next
+                    </Button>
+                    <Box sx={{ mt: 2, textAlign: 'center' }}>
+                      <span style={{ color: '#888', fontSize: 15 }}>Already registered? </span>
+                      <Button variant="text" color="primary" size="small" sx={{ fontWeight: 700, textTransform: 'none', fontSize: 15, ml: 0.5, p: 0 }} onClick={() => window.location.href = '/auth/login'}>
+                        Login
                       </Button>
-                    </>
-                  )}
-                  {step === 2 && (
-                    <>
-                      <TextField label="Phone" name="phone" fullWidth margin="normal" value={form.phone} onChange={handleChange} />
-                      <TextField label="Date of Birth" name="dateOfBirth" type="date" fullWidth margin="normal" value={form.dateOfBirth} onChange={handleChange} InputLabelProps={{ shrink: true }} />
-                      <TextField select label="Gender" name="gender" fullWidth margin="normal" value={form.gender} onChange={handleChange}>
-                        <MenuItem value="male">Male</MenuItem>
-                        <MenuItem value="female">Female</MenuItem>
-                        <MenuItem value="other">Other</MenuItem>
-                      </TextField>
+                    </Box>
+                  </>
+                )}
+                {step === 2 && (
+                  <>
+                    <TextField label="Phone" name="phone" fullWidth margin="normal" value={form.phone} onChange={handleChange} />
+                    <TextField label="Date of Birth" name="dateOfBirth" type="date" fullWidth margin="normal" value={form.dateOfBirth} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+                    <TextField select label="Gender" name="gender" fullWidth margin="normal" value={form.gender} onChange={handleChange}>
+                      <MenuItem value="male">Male</MenuItem>
+                      <MenuItem value="female">Female</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </TextField>
 
                       {/* Doctor-specific fields */}
                       {form.userType === 'doctor' && (
@@ -260,42 +250,51 @@ export default function Register() {
                         </Fade>
                       )}
 
-                      {/* Patient-specific fields */}
-                      {form.userType === 'patient' && (
-                        <Fade in timeout={600}>
-                          <Box>
-                            <TextField label="Emergency Contact Name" name="emergencyContactName" fullWidth margin="normal" value={form.emergencyContactName} onChange={handleChange} />
-                            <TextField label="Emergency Contact Phone" name="emergencyContactPhone" fullWidth margin="normal" value={form.emergencyContactPhone} onChange={handleChange} />
-                            <TextField label="Emergency Contact Relationship" name="emergencyContactRelationship" fullWidth margin="normal" value={form.emergencyContactRelationship} onChange={handleChange} />
-                            <TextField label="Medical History (comma separated)" name="medicalHistory" fullWidth margin="normal" value={form.medicalHistory} onChange={handleChange} />
-                            <TextField label="Allergies (comma separated)" name="allergies" fullWidth margin="normal" value={form.allergies} onChange={handleChange} />
-                          </Box>
-                        </Fade>
-                      )}
-                      <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                        <Button variant="outlined" color="primary" onClick={handleBack} sx={{ flex: 1, py: 1.3, fontWeight: 700, fontSize: '1.1rem', borderRadius: 3 }}>Back</Button>
-                        <Button type="submit" variant="contained" color="primary" sx={{ flex: 1, py: 1.3, fontWeight: 700, fontSize: '1.1rem', borderRadius: 3, boxShadow: '0 4px 20px 0 rgba(31, 38, 135, 0.10)', background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)', transition: 'all 0.2s', '&:hover': { background: 'linear-gradient(90deg, #1565c0 0%, #2193b0 100%)', transform: 'scale(1.03)', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' } }}>Register</Button>
-                      </Stack>
-                    </>
-                  )}
-                </Box>
-              </Grow>
-            </form>
-          </Card>
-          {/* OTP Modal */}
-          <Dialog open={otpModalOpen}>
-            <DialogTitle>Email Verification</DialogTitle>
-            <DialogContent>
-              <TextField label="Enter OTP" value={otp} onChange={e => setOtp(e.target.value)} fullWidth margin="normal" />
-              {otpError && <div style={{ color: 'red' }}>{otpError}</div>}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleVerifyOtp} disabled={verifyingOtp || !otp} variant="contained" color="primary">
-                {verifyingOtp ? <CircularProgress size={20} /> : 'Verify'}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </Box>
+                    {/* Patient-specific fields */}
+                    {form.userType === 'patient' && (
+                      <Fade in timeout={600}>
+                        <Box>
+                          <TextField label="Emergency Contact Name" name="emergencyContactName" fullWidth margin="normal" value={form.emergencyContactName} onChange={handleChange} />
+                          <TextField label="Emergency Contact Phone" name="emergencyContactPhone" fullWidth margin="normal" value={form.emergencyContactPhone} onChange={handleChange} />
+                          <TextField label="Emergency Contact Relationship" name="emergencyContactRelationship" fullWidth margin="normal" value={form.emergencyContactRelationship} onChange={handleChange} />
+                          <TextField label="Medical History (comma separated)" name="medicalHistory" fullWidth margin="normal" value={form.medicalHistory} onChange={handleChange} />
+                          <TextField label="Allergies (comma separated)" name="allergies" fullWidth margin="normal" value={form.allergies} onChange={handleChange} />
+                        </Box>
+                      </Fade>
+                    )}
+                    <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                      <Button variant="outlined" color="primary" onClick={handleBack} sx={{ flex: 1, py: 1.3, fontWeight: 700, fontSize: '1.1rem', borderRadius: 3 }}>Back</Button>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        sx={{
+                          flex: 1,
+                          py: 1.3,
+                          fontWeight: 800,
+                          fontSize: '1.13rem',
+                          borderRadius: 3,
+                          letterSpacing: 1,
+                          background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)',
+                          boxShadow: '0 4px 20px 0 rgba(33,147,176,0.13)',
+                          transition: 'all 0.18s',
+                          textTransform: 'uppercase',
+                          '&:hover': {
+                            background: 'linear-gradient(90deg, #1565c0 0%, #2193b0 100%)',
+                            transform: 'scale(1.04)',
+                            boxShadow: '0 8px 32px 0 rgba(33,147,176,0.18)'
+                          }
+                        }}
+                      >
+                        Register
+                      </Button>
+                    </Stack>
+                  </>
+                )}
+              </Box>
+            </Grow>
+          </form>
+        </Card>
       </Fade>
     </Box>
   );
