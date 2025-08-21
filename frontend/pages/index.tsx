@@ -7,6 +7,8 @@ import {
   Paper,
   Divider,
   Stack,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 // import Link from 'next/link';
 import Link from "next/link";
@@ -27,6 +29,7 @@ const verifications = ["Verified", "Unverified"];
 const sortOptions = ["Newest", "Oldest", "Most Upvoted"];
 
 const HomePage = () => {
+  const [toastOpen, setToastOpen] = useState(false);
   // Leaderboard preview data
   const topContributors = [
     { name: "Dr. Smith", points: 320 },
@@ -39,6 +42,12 @@ const HomePage = () => {
   const [difficulty, setDifficulty] = useState("");
   const [verification, setVerification] = useState("");
   const [sort, setSort] = useState("Newest");
+
+  // Snackbar close handler
+  const handleToastClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') return;
+    setToastOpen(false);
+  };
 
   return (
     <Box
@@ -240,46 +249,7 @@ const HomePage = () => {
           <li>Leaderboard and advanced search</li>
           <li>LinkedIn/GitHub export, video conferencing</li>
         </ul>
-        <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
-          <Link href="/auth/login" passHref legacyBehavior>
-            <Button
-              variant="contained"
-              sx={{
-                borderRadius: 2,
-                px: 4,
-                fontWeight: 600,
-                background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
-                boxShadow: "0 2px 12px #2193b044",
-                transition: "transform 0.2s",
-                "&:hover": {
-                  transform: "scale(1.05)",
-                  boxShadow: "0 4px 24px #2193b066",
-                },
-              }}
-            >
-              Login
-            </Button>
-          </Link>
-          <Link href="/auth/register" passHref legacyBehavior>
-            <Button
-              variant="contained"
-              sx={{
-                borderRadius: 2,
-                px: 4,
-                fontWeight: 600,
-                background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
-                boxShadow: "0 2px 12px #2193b044",
-                transition: "transform 0.2s",
-                "&:hover": {
-                  transform: "scale(1.05)",
-                  boxShadow: "0 4px 24px #2193b066",
-                },
-              }}
-            >
-              Register
-            </Button>
-          </Link>
-        </Box>
+  {/* Login/Register buttons removed as requested */}
       </Box>
       <Box
         sx={{
@@ -290,23 +260,24 @@ const HomePage = () => {
           mb: { xs: 4, md: 6 },
           position: 'relative',
           zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: { xs: 'block', md: 'flex' },
+          alignItems: { xs: 'center', md: 'center' },
+          justifyContent: { xs: 'center', md: 'center' },
           gap: 6,
           background: 'linear-gradient(120deg, #e0f7fa 0%, #f8f9fa 100%)',
           borderRadius: 6,
           boxShadow: '0 2px 24px #2193b022',
+          textAlign: { xs: 'center', md: 'left' },
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 260 }}>
-          <Typography variant="h4" fontWeight={700} color="#2193b0" mb={2}>
+        <Box sx={{ flex: 1, minWidth: 260, display: { xs: 'flex', md: 'block' }, flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography variant="h4" fontWeight={700} color="#2193b0" mb={2} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
             Ready to improve your medical journey?
           </Typography>
-          <Typography variant="body1" color="#555" mb={3}>
+          <Typography variant="body1" color="#555" mb={3} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
             Download the Med-Internia app and access medical cases, jobs, webinars, and more on your mobile device.
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 2, justifyContent: { xs: 'center', md: 'flex-start' } }}>
             <Button variant="contained" sx={{ background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)', color: '#fff', fontWeight: 700, px: 2, borderRadius: 2, boxShadow: 1 }}>
               Download for iOS
             </Button>
@@ -317,19 +288,19 @@ const HomePage = () => {
         </Box>
         <Box
             sx={{
-              bgcolor: '#c8d8f7ff', // light blue for contrast
+              bgcolor: '#c8d8f7ff',
               borderRadius: 4,
               boxShadow: '0 4px 32px #2193b044',
               p: 3,
               minWidth: 220,
               textAlign: 'center',
-              display: 'flex',
+              display: { xs: 'none', sm: 'flex' },
               flexDirection: 'column',
               alignItems: 'center',
             }}
         >
           <div style={{ background: '#fff', padding: 8, borderRadius: 12, boxShadow: '0 2px 8px #2193b022', marginBottom: 12 }}>
-            <img src="/qrcode.png" alt="Med-Internia QR Code" width={140} height={140} style={{ display: 'block', margin: '0 auto' }} />
+            <img src="/qr-blue-spies.png" alt="Team Blue Spies QR" width={140} height={140} style={{ display: 'block', margin: '0 auto' }} />
           </div>
             <Typography variant="h6" color="#2193b0" fontWeight={700} mb={1}>
               Med-Internia App on Mobile
@@ -428,80 +399,95 @@ const HomePage = () => {
     desc: string;
   }) {
     return (
-      <Link href={href} passHref legacyBehavior>
-        <Paper
-          elevation={4}
+      <Paper
+        elevation={4}
+        sx={{
+          p: 3,
+          borderRadius: 4,
+          minWidth: 220,
+          flex: 1,
+          textAlign: "center",
+          transition: "box-shadow 0.2s, transform 0.2s",
+          cursor: "pointer",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          "&:hover": {
+            boxShadow: 12,
+            background: "#e0eafc",
+            transform: "scale(1.04)",
+            filter: "drop-shadow(0 0 12px #2193b044)",
+          },
+        }}
+      >
+        <Box
+          mb={1}
           sx={{
-            p: 3,
-            borderRadius: 4,
-            minWidth: 220,
-            flex: 1,
-            textAlign: "center",
-            transition: "box-shadow 0.2s, transform 0.2s",
-            cursor: "pointer",
-            position: "relative",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "flex-start",
-            "&:hover": {
-              boxShadow: 12,
-              background: "#e0eafc",
-              transform: "scale(1.04)",
-              filter: "drop-shadow(0 0 12px #2193b044)",
-            },
           }}
         >
-          <Box
-            mb={1}
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            {icon}
-          </Box>
-          <Typography
-            variant="h6"
-            fontWeight={700}
-            color="#2193b0"
-            mb={0.5}
-            sx={{ fontSize: "1.25rem" }}
-          >
-            {title}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            mb={1}
-            sx={{ minHeight: 32 }}
-          >
-            {desc}
-          </Typography>
-          <Button
-            variant="contained"
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              fontWeight: 600,
-              background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
+          {icon}
+        </Box>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          color="#2193b0"
+          mb={0.5}
+          sx={{ fontSize: "1.25rem" }}
+        >
+          {title}
+        </Typography>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          mb={1}
+          sx={{ minHeight: 32 }}
+        >
+          {desc}
+        </Typography>
+        <Button
+          variant="contained"
+          sx={{
+            borderRadius: 2,
+            px: 3,
+            fontWeight: 600,
+            background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
+            color: "#fff",
+            boxShadow: "0 1px 4px #2193b022",
+            mt: 1,
+            "&:hover": {
+              background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
               color: "#fff",
-              boxShadow: "0 1px 4px #2193b022",
-              mt: 1,
-              "&:hover": {
-                background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
-                color: "#fff",
-                boxShadow: "0 2px 8px #2193b044",
-              },
-            }}
-          >
-            Explore
-          </Button>
-        </Paper>
-      </Link>
+              boxShadow: "0 2px 8px #2193b044",
+            },
+          }}
+          onClick={() => setToastOpen(true)}
+        >
+          Explore
+        </Button>
+      </Paper>
     );
   }
+  return (
+    <>
+      {/* ...existing code... */}
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={3000}
+        onClose={handleToastClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleToastClose} severity="info" sx={{ width: '100%', fontWeight: 700, fontSize: 16, background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)', color: '#fff', boxShadow: '0 2px 12px #2193b044' }}>
+          Login for more info
+        </Alert>
+      </Snackbar>
+      {/* ...existing code... */}
+    </>
+  );
 };
 
 export default HomePage;
