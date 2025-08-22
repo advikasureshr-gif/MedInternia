@@ -100,7 +100,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ onNavigate, profileIm
           </Typography>
         </Box>
         <Divider sx={{ my: 1 }} />
-        <MenuItem
+        {/* <MenuItem
           onClick={() => {
             handleClose();
             if (window.location.pathname !== `/profile/${userId}`) {
@@ -110,7 +110,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ onNavigate, profileIm
           sx={{ py: 1.2 }}
         >
           <PersonIcon sx={{ mr: 1 }} /> View Profile
-        </MenuItem>
+        </MenuItem> */}
         <MenuItem
           onClick={() => {
             handleClose();
