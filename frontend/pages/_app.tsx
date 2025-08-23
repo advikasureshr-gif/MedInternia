@@ -1,5 +1,4 @@
 import type { AppProps } from "next/app";
-import MouseTrail from "../components/MouseTrail";
 import { CssBaseline } from "@mui/material";
 import Navbar from "../components/Navbar";
 import { useRouter } from "next/router";
@@ -13,7 +12,6 @@ function MyApp({ Component, pageProps }: AppProps) {
     <>
       <CssBaseline />
       {showNavbar && <Navbar route={router.pathname} />}
-      <MouseTrail />
       <div style={{ marginTop: showNavbar ? 64 : 0, minHeight: '100vh' }}>
         <Component {...pageProps} />
       </div>
