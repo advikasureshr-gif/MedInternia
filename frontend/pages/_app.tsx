@@ -11,6 +11,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <>
       <CssBaseline />
+      
       {showNavbar && <Navbar route={router.pathname} />}
       <div style={{ marginTop: showNavbar ? 64 : 0, minHeight: '100vh' }}>
         <Component {...pageProps} />
