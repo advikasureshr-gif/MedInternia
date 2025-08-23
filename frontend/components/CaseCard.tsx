@@ -73,6 +73,9 @@ export default function CaseCard({ caseData, onOpenDiscussion, onReadMore, isExp
   const shortDesc = desc.length > 180 ? desc.slice(0, 180) + "..." : desc;
 
 
+  // Color palette for the circle
+  // Pick a color based on case id (stable per card)
+
   return (
     <Card sx={{ borderRadius: 4, boxShadow: '0 4px 24px #2193b022', mb: 3, animation: 'fadeInCard 0.7s' }}>
       <CardContent>
@@ -84,11 +87,8 @@ export default function CaseCard({ caseData, onOpenDiscussion, onReadMore, isExp
           </Box>
         </Stack>
         {/* Title and status */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1, justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography fontSize={28} sx={{ color: accent.color }}>{accent.icon}</Typography>
-            <Typography variant="h5" fontWeight={800} color="#1565c0" sx={{ flex: 1, letterSpacing: 0.5 }}>{caseData?.title || "Untitled Case"}</Typography>
-          </Box>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 1, justifyContent: 'space-between' }}>
+          <Typography variant="h5" fontWeight={800} color="#1565c0" sx={{ flex: 1, letterSpacing: 0.5 }}>{caseData?.title || "Untitled Case"}</Typography>
           <Box
             sx={{
               px: 2,
