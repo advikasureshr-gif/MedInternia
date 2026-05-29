@@ -1,11 +1,10 @@
-import { useRouter } from "next/router";
+import Link from "next/link";
 
 const CaseOfDayBanner = () => {
-  const router = useRouter();
-
   return (
-    <div
-      onClick={() => router.push("/case-of-the-day")}
+    <Link
+      href="/case-of-the-day"
+      aria-label="Case of the Day — Join Live Discussion"
       style={{
         marginBottom: "18px",
         padding: "16px 20px",
@@ -21,10 +20,11 @@ const CaseOfDayBanner = () => {
         alignItems: "center",
         textAlign: "center",
         transition: "0.3s ease",
+        textDecoration: "none",
       }}
     >
       🔬 Case of the Day — Join Live Discussion →
-    </div>
+    </Link>
   );
 };
 
