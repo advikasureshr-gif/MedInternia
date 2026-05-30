@@ -29,7 +29,6 @@ export default function Login() {
   const role = user?.role || '';
   const userId = user?._id || user?.id || '';
   localStorage.setItem('token', token);
-  localStorage.setItem('role', role);
   localStorage.setItem('userId', userId);
   // Optionally show a toast/snackbar for success, but do not show token
   router.push('/dashboard');

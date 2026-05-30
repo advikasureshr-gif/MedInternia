@@ -32,6 +32,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import ArticleIcon from "@mui/icons-material/Article";
 import CloseIcon from '@mui/icons-material/Close';
 
+import { getCurrentUserRole } from "../utils/permissions";
+
 // Define a TypeScript interface for the NavButton props
 interface NavButtonProps {
   href: string;
@@ -100,7 +102,7 @@ export default function Navbar({ route }: { route?: string }) {
   const handleHomeNav = () => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
-      const role = localStorage.getItem('role') || '';
+      const role = getCurrentUserRole() || '';
       if (token) {
         switch (role) {
           case 'doctor':
