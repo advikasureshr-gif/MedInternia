@@ -144,7 +144,7 @@ export default function Register() {
     setVerifyingOtp(true);
     setOtpError('');
     try {
-  const res = await fetch('http://localhost:3000/api/auth/verify-otp', {
+      const res = await fetch('http://localhost:3000/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, otp })
@@ -173,11 +173,11 @@ export default function Register() {
       return;
     }
     if (confirmPassword !== form.password) {
-  setConfirmPasswordError('Passwords do not match');
-  return;
-}
-setConfirmPasswordError('');
-setStep(2);
+      setConfirmPasswordError('Passwords do not match');
+      return;
+    }
+    setConfirmPasswordError('');
+    setStep(2);
   };
 
   const handleBack = () => {
@@ -215,7 +215,15 @@ setStep(2);
     // GSSoC: Show loading spinner while request is in-flight
     setLoading(true);
     try {
-      await api.post('/auth/register', form);
+      // Build payload — omit empty optional ObjectId fields so Mongoose doesn't
+      // try to cast an empty string to an ObjectId and throw a 400.
+      const payload: Record<string, any> = { ...form };
+      if (!payload.mentorDoctor) delete payload.mentorDoctor;
+      if (!payload.phone) delete payload.phone;
+      if (!payload.dateOfBirth) delete payload.dateOfBirth;
+      if (!payload.gender) delete payload.gender;
+
+      await api.post('/auth/register', payload);
       router.push('/auth/login');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -358,20 +366,20 @@ setStep(2);
                       }}
                     />
                     <TextField
-  label="Confirm Password"
-  type={showConfirmPassword ? 'text' : 'password'}
-  fullWidth
-  margin="normal"
-  value={confirmPassword}
-  onChange={(e) => {
-    setConfirmPassword(e.target.value);
-    if (e.target.value !== form.password) {
-      setConfirmPasswordError('Passwords do not match');
-    } else {
-      setConfirmPasswordError('');
-    }
-  }}
-  required
+                      label="Confirm Password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      fullWidth
+                      margin="normal"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (e.target.value !== form.password) {
+                          setConfirmPasswordError('Passwords do not match');
+                        } else {
+                          setConfirmPasswordError('');
+                        }
+                      }}
+                      required
                       error={Boolean((confirmPassword && confirmPassword !== form.password) || (!confirmPassword && confirmPasswordError))}
                       helperText={
                         confirmPassword && confirmPassword !== form.password
@@ -380,20 +388,20 @@ setStep(2);
                             ? confirmPasswordError
                             : ''
                       }
-  InputProps={{
-    endAdornment: (
-      <InputAdornment position="end">
-        <IconButton
-          onClick={() => setShowConfirmPassword((show) => !show)}
-          edge="end"
-          sx={{ color: 'text.secondary' }}
-        >
-          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-        </IconButton>
-      </InputAdornment>
-    ),
-  }}
-/>
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowConfirmPassword((show) => !show)}
+                              edge="end"
+                              sx={{ color: 'text.secondary' }}
+                            >
+                              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
                     <TextField select label="User Type" name="userType" fullWidth margin="normal" value={form.userType} onChange={handleChange} required>
                       <MenuItem value="patient">Patient</MenuItem>
                       <MenuItem value="doctor">Doctor</MenuItem>
@@ -453,29 +461,29 @@ setStep(2);
                       <MenuItem value="other">Other</MenuItem>
                     </TextField>
 
-                      {/* Doctor-specific fields */}
-                      {form.userType === 'doctor' && (
-                        <Fade in timeout={600}>
-                          <Box>
-                            <TextField label="Specialization" name="specialization" fullWidth margin="normal" value={form.specialization} onChange={handleChange} required />
-                            <TextField label="License Number" name="licenseNumber" fullWidth margin="normal" value={form.licenseNumber} onChange={handleChange} required />
-                            <TextField label="Experience (years)" name="experience" type="number" fullWidth margin="normal" value={form.experience} onChange={handleChange} />
-                            <TextField label="Qualifications (comma separated)" name="qualifications" fullWidth margin="normal" value={form.qualifications} onChange={handleChange} />
-                          </Box>
-                        </Fade>
-                      )}
+                    {/* Doctor-specific fields */}
+                    {form.userType === 'doctor' && (
+                      <Fade in timeout={600}>
+                        <Box>
+                          <TextField label="Specialization" name="specialization" fullWidth margin="normal" value={form.specialization} onChange={handleChange} required />
+                          <TextField label="License Number" name="licenseNumber" fullWidth margin="normal" value={form.licenseNumber} onChange={handleChange} required />
+                          <TextField label="Experience (years)" name="experience" type="number" fullWidth margin="normal" value={form.experience} onChange={handleChange} />
+                          <TextField label="Qualifications (comma separated)" name="qualifications" fullWidth margin="normal" value={form.qualifications} onChange={handleChange} />
+                        </Box>
+                      </Fade>
+                    )}
 
-                      {/* Intern-specific fields */}
-                      {form.userType === 'intern' && (
-                        <Fade in timeout={600}>
-                          <Box>
-                            <TextField label="Medical School" name="medicalSchool" fullWidth margin="normal" value={form.medicalSchool} onChange={handleChange} required />
-                            <TextField label="Year of Study" name="yearOfStudy" type="number" fullWidth margin="normal" value={form.yearOfStudy} onChange={handleChange} required />
-                            <TextField label="Interests (comma separated)" name="interests" fullWidth margin="normal" value={form.interests} onChange={handleChange} />
-                            <TextField label="Mentor Doctor ID (optional)" name="mentorDoctor" fullWidth margin="normal" value={form.mentorDoctor} onChange={handleChange} />
-                          </Box>
-                        </Fade>
-                      )}
+                    {/* Intern-specific fields */}
+                    {form.userType === 'intern' && (
+                      <Fade in timeout={600}>
+                        <Box>
+                          <TextField label="Medical School" name="medicalSchool" fullWidth margin="normal" value={form.medicalSchool} onChange={handleChange} required />
+                          <TextField label="Year of Study" name="yearOfStudy" type="number" fullWidth margin="normal" value={form.yearOfStudy} onChange={handleChange} required />
+                          <TextField label="Interests (comma separated)" name="interests" fullWidth margin="normal" value={form.interests} onChange={handleChange} />
+                          <TextField label="Mentor Doctor ID (optional)" name="mentorDoctor" fullWidth margin="normal" value={form.mentorDoctor} onChange={handleChange} />
+                        </Box>
+                      </Fade>
+                    )}
 
                     {/* Patient-specific fields */}
                     {form.userType === 'patient' && (
