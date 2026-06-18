@@ -27,6 +27,9 @@ export default function ResearchPaperUpload() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [papers, setPapers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedField, setSelectedField] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('');
   const [loading, setLoading] = useState(false);
   const [openPaper, setOpenPaper] = useState<any>(null);
   const [openDiscussionId, setOpenDiscussionId] = useState<string | null>(null);
@@ -89,7 +92,44 @@ export default function ResearchPaperUpload() {
       setError('Failed to upload research paper.');
     }
   };
+const fields = [
+  ...new Set(
+    papers
+      .map((paper) => paper.field)
+      .filter(Boolean)
+  ),
+];
 
+const difficulties = [
+  ...new Set(
+    papers
+      .map((paper) => paper.difficulty)
+      .filter(Boolean)
+  ),
+];
+
+const filteredPapers = papers.filter((paper) => {
+  const search = searchTerm.toLowerCase();
+
+  const matchesSearch =
+    paper.title?.toLowerCase().includes(search) ||
+    paper.description?.toLowerCase().includes(search) ||
+    paper.field?.toLowerCase().includes(search);
+
+  const matchesField =
+    !selectedField ||
+    paper.field === selectedField;
+
+  const matchesDifficulty =
+    !selectedDifficulty ||
+    paper.difficulty === selectedDifficulty;
+
+  return (
+    matchesSearch &&
+    matchesField &&
+    matchesDifficulty
+  );
+});
   return (
     <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)', py: 6 }}>
       {/* Section header like cases */}
@@ -125,17 +165,67 @@ export default function ResearchPaperUpload() {
           + Upload New Paper
         </Button>
       </Box>
+      <Box
+  sx={{
+    maxWidth: 1000,
+    mx: "auto",
+    mb: 4,
+    display: "flex",
+    gap: 2,
+    flexWrap: "wrap",
+    alignItems: "center",
+  }}
+>
+  <TextField
+    label="Search Research Papers"
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    sx={{ flex: 1, minWidth: 250 }}
+  />
+
+  <TextField
+    select
+    label="Medical Specialty"
+    value={selectedField}
+    onChange={(e) => setSelectedField(e.target.value)}
+    sx={{ minWidth: 200 }}
+  >
+    <MenuItem value="">All Specialties</MenuItem>
+
+    {fields.map((field) => (
+      <MenuItem key={field} value={field}>
+        {field}
+      </MenuItem>
+    ))}
+  </TextField>
+
+  <TextField
+    select
+    label="Difficulty"
+    value={selectedDifficulty}
+    onChange={(e) => setSelectedDifficulty(e.target.value)}
+    sx={{ minWidth: 180 }}
+  >
+    <MenuItem value="">All Levels</MenuItem>
+
+    {difficulties.map((difficulty) => (
+      <MenuItem key={difficulty} value={difficulty}>
+        {difficulty}
+      </MenuItem>
+    ))}
+  </TextField>
+</Box>
       {/* List of research papers */}
       <Box sx={{ maxWidth: 800, mx: 'auto', mb: 6 }}>
         {loading ? (
           <Typography align="center" color="text.secondary">Loading...</Typography>
-        ) : papers.length === 0 ? (
+        ) :  filteredPapers.length === 0 ? (
           <Box sx={{ borderRadius: 4, boxShadow: '0 4px 24px #2193b022', mb: 3, bgcolor: '#fff', p: 3, textAlign: 'center' }}>
             <Typography fontWeight={700} fontSize={20} color="#1976d2">No research papers yet</Typography>
             <Typography fontSize={15} color="#888">Be the first to share a research paper with the community!</Typography>
           </Box>
         ) : (
-          papers.map((paper) => (
+          filteredPapers.map((paper) => (
             <ResearchPaperCard
               key={paper._id}
               paper={paper}
