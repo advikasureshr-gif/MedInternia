@@ -38,12 +38,15 @@ const isWebinarExpired = (webinar: any) => {
   return new Date(webinar.scheduledAt) <= now;
 };
 
+
 export default function WebinarsPage() {
   const router = useRouter();
   const [webinars, setWebinars] = useState<any[]>([]);
   const [selectedWebinar, setSelectedWebinar] = useState<any>(null);
   const [canManageWebinars, setCanManageWebinars] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
+  const [registeredWebinars, setRegisteredWebinars] = useState<Set<string>>(new Set());
+  const [currentUserId, setCurrentUserId] = useState<string>('');
 
 
     useEffect(() => {
@@ -67,15 +70,61 @@ export default function WebinarsPage() {
       // Fetch user profile to check whether the current role can manage webinars.
       api.get('/auth/profile')
         .then(res => {
-          const userType = res.data?.data?.user?.userType;
+          const user = res.data?.data?.user;
+          const userType = user?.userType;
+          setCurrentUserId(user?._id || '');
           setCanManageWebinars(canUser(userType, 'webinar:manage'));
         })
         .catch(() => setCanManageWebinars(false));
     }, []);
 
+    // Check which webinars the user is registered for
+    useEffect(() => {
+      if (!currentUserId) return;
+      
+      const registered = new Set<string>();
+      webinars.forEach((w) => {
+        const isRegistered = w.participants?.some(
+          (p: any) => (p.user?._id === currentUserId || p.user === currentUserId)
+        );
+        if (isRegistered) {
+          registered.add(w._id);
+        }
+      });
+      setRegisteredWebinars(registered);
+    }, [webinars, currentUserId]);
+
   if (selectedWebinar) {
     return <WebinarJoin meetingLink={selectedWebinar.meetingLink} onLeave={() => setSelectedWebinar(null)} />;
   }
+
+  const handleRegister = async (webinarId: string) => {
+    try {
+      await api.post(`/webinars/${webinarId}/register`, {});
+      // Update registered webinars set
+      setRegisteredWebinars(prev => new Set([...prev, webinarId]));
+      alert('Registered successfully for webinar!');
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to register for webinar';
+      alert(message);
+    }
+  };
+
+  const handleUnregister = async (webinarId: string) => {
+    try {
+      await api.delete(`/webinars/${webinarId}/register`);
+      // Update registered webinars set
+      setRegisteredWebinars(prev => {
+        const updated = new Set(prev);
+        updated.delete(webinarId);
+        return updated;
+      });
+      alert('Unregistered successfully!');
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to unregister';
+      alert(message);
+    }
+  };
 
 
   return (
@@ -115,7 +164,10 @@ export default function WebinarsPage() {
           ) : (
             webinars.map((w, i) => {
               const expired = isWebinarExpired(w);
-              const canJoin = activeTab === 'active' && !expired && (w.status === 'scheduled' || w.status === 'live');
+              const isRegistered = registeredWebinars.has(w._id);
+              const canJoin = activeTab === 'active' && !expired && (w.status === 'live');
+              const canRegister = activeTab === 'active' && !expired && w.status === 'scheduled' && !isRegistered;
+              const canUnregister = activeTab === 'active' && !expired && w.status === 'scheduled' && isRegistered;
 
               return (
               <ListItem
@@ -144,6 +196,50 @@ export default function WebinarsPage() {
                     >
                       Join
                     </Button>
+                  ) : canRegister ? (
+                    <Button
+                      variant="contained"
+                      sx={{
+                        borderRadius: 3,
+                        px: 3,
+                        py: 1,
+                        fontWeight: 700,
+                        fontSize: "1.02rem",
+                        background: "#4caf50",
+                        color: "#fff",
+                        boxShadow: "0 2px 8px #4caf5044",
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          background: "#388e3c",
+                          boxShadow: "0 4px 16px #4caf5066",
+                        },
+                      }}
+                      onClick={() => handleRegister(w._id)}
+                    >
+                      Register
+                    </Button>
+                  ) : canUnregister ? (
+                    <Button
+                      variant="outlined"
+                      sx={{
+                        borderRadius: 3,
+                        px: 3,
+                        py: 1,
+                        fontWeight: 700,
+                        fontSize: "1.02rem",
+                        borderColor: "#ff9800",
+                        color: "#ff9800",
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          background: "rgba(255,152,0,0.08)",
+                          borderColor: "#f57c00",
+                          color: "#f57c00",
+                        },
+                      }}
+                      onClick={() => handleUnregister(w._id)}
+                    >
+                      Unregister
+                    </Button>
                   ) : (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Box sx={{
@@ -161,7 +257,7 @@ export default function WebinarsPage() {
                         cursor: "not-allowed",
                         userSelect: "none",
                       }}>
-                        {w.status === 'cancelled' ? 'Cancelled' : 'Completed'}
+                        {expired ? (w.status === 'cancelled' ? 'Cancelled' : 'Completed') : w.status === 'scheduled' ? 'Scheduled' : 'Not Joinable'}
                       </Box>
                     </Box>
                   )
@@ -176,6 +272,14 @@ export default function WebinarsPage() {
                         color={expired ? 'default' : w.status === 'live' ? 'success' : 'primary'}
                         size="small"
                       />
+                      {isRegistered && (
+                        <Chip
+                          label="Registered"
+                          color="success"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
                     </Box>
                   }
                   secondary={<Typography color="text.secondary">{new Date(w.scheduledAt).toLocaleString()}</Typography>}

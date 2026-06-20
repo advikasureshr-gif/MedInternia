@@ -28,18 +28,38 @@ export default function WebinarDetail() {
   const [webinar, setWebinar] = useState<any>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [isRegistered, setIsRegistered] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    api.get(`/webinars/${id}`)
-      .then(res => {
-        setWebinar(res.data.data.webinar);
+    
+    const fetchData = async () => {
+      try {
+        const [webinarRes, userRes] = await Promise.all([
+          api.get(`/webinars/${id}`),
+          api.get('/auth/profile')
+        ]);
+        
+        const fetchedWebinar = webinarRes.data.data.webinar;
+        const userId = userRes.data?.data?.user?._id;
+        
+        setWebinar(fetchedWebinar);
+        setCurrentUserId(userId);
+        
+        // Check if user is registered
+        const registered = fetchedWebinar.participants?.some(
+          (p: any) => (p.user?._id === userId || p.user === userId)
+        );
+        setIsRegistered(registered);
         setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to fetch webinar');
+      } catch (err) {
+        setError('Failed to fetch webinar details');
         setLoading(false);
-      });
+      }
+    };
+    
+    fetchData();
   }, [id]);
 
   const handleRegister = async () => {
@@ -49,13 +69,27 @@ export default function WebinarDetail() {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      await api.post(`/webinars/${id}/register`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Registered successfully!');
-    } catch {
-      setError('Failed to register');
+      await api.post(`/webinars/${id}/register`, {});
+      setIsRegistered(true);
+      // Refresh webinar data
+      const res = await api.get(`/webinars/${id}`);
+      setWebinar(res.data.data.webinar);
+      setError('');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to register');
+    }
+  };
+
+  const handleUnregister = async () => {
+    try {
+      await api.delete(`/webinars/${id}/register`);
+      setIsRegistered(false);
+      // Refresh webinar data
+      const res = await api.get(`/webinars/${id}`);
+      setWebinar(res.data.data.webinar);
+      setError('');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to unregister');
     }
   };
 
@@ -65,7 +99,9 @@ export default function WebinarDetail() {
 
   const expired = isWebinarExpired(webinar);
   const statusLabel = expired ? (webinar.status === 'cancelled' ? 'Cancelled' : 'Completed') : webinar.status;
-  const registrationClosed = expired || webinar.status !== 'scheduled';
+  const canJoin = !expired && webinar.status === 'live';
+  const canRegister = !expired && webinar.status === 'scheduled' && !isRegistered;
+  const canUnregister = !expired && webinar.status === 'scheduled' && isRegistered;
 
   return (
     <Container maxWidth="sm">
@@ -78,25 +114,89 @@ export default function WebinarDetail() {
                 label={statusLabel}
                 color={expired ? 'default' : webinar.status === 'live' ? 'success' : 'primary'}
               />
+              {isRegistered && (
+                <Chip
+                  label="Registered"
+                  color="success"
+                  variant="outlined"
+                />
+              )}
             </Box>
             <Typography variant="body2" color="text.secondary" gutterBottom>
               {new Date(webinar.scheduledAt).toLocaleString()}
             </Typography>
-            <Typography variant="body1">{webinar.description}</Typography>
-            {expired && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                This webinar has completed. Joining and registration are no longer available.
+            {webinar.host && (
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Host: {webinar.host.firstName} {webinar.host.lastName}
+              </Typography>
+            )}
+            <Typography variant="body1" sx={{ mt: 2 }}>{webinar.description}</Typography>
+            
+            {webinar.registrationDeadline && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Registration deadline: {new Date(webinar.registrationDeadline).toLocaleString()}
+              </Typography>
+            )}
+            
+            {webinar.maxParticipants && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Participants: {webinar.participants?.length || 0} / {webinar.maxParticipants}
+              </Typography>
+            )}
+            
+            {error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {error}
               </Alert>
             )}
-            <Button
-              variant="contained"
-              color="primary"
-              sx={{ mt: 2 }}
-              onClick={handleRegister}
-              disabled={registrationClosed}
-            >
-              {registrationClosed ? 'Registration closed' : 'Register'}
-            </Button>
+            
+            {expired && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                This webinar has {webinar.status === 'cancelled' ? 'been cancelled' : 'completed'}. Registration is no longer available.
+              </Alert>
+            )}
+            
+            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+              {canJoin && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => router.push(`/webinars/${id}/join`)}
+                  sx={{ flex: 1 }}
+                >
+                  Join Now
+                </Button>
+              )}
+              {canRegister && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleRegister}
+                  sx={{ flex: 1 }}
+                >
+                  Register for Webinar
+                </Button>
+              )}
+              {canUnregister && (
+                <>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    sx={{ flex: 1 }}
+                    disabled
+                  >
+                    Already Registered
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleUnregister}
+                  >
+                    Unregister
+                  </Button>
+                </>
+              )}
+            </Box>
           </CardContent>
         </Card>
       </Box>
