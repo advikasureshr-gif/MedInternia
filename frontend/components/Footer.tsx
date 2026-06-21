@@ -1,7 +1,7 @@
 // GSSoC: Redesigned Footer component to match MedInternia design
 import React from 'react';
 import Link from 'next/link';
-import { Linkedin, Twitter, Instagram, Mail, Send } from 'lucide-react';
+import { Linkedin, X, Instagram, Mail, Send } from 'lucide-react';
 import { Box, Typography, Stack, Divider, IconButton, InputBase, Paper } from '@mui/material';
 import { getLoginHref, protectedLandingPaths } from '../utils/authRedirect';
 
@@ -60,7 +60,7 @@ export default function Footer() {
           <Typography variant="body2" sx={{ opacity: 0.7, lineHeight: 1.8, mb: 3, fontSize: '0.9rem' }}>
             Your gateway to medical learning, peer collaboration, career opportunities, and live webinars.
           </Typography>
-          
+
           <Stack direction="row" spacing={1.5}>
             <IconButton
               aria-label="LinkedIn"
@@ -73,14 +73,14 @@ export default function Footer() {
               <Linkedin size={18} />
             </IconButton>
             <IconButton
-              aria-label="Twitter"
+              aria-label="X"
               component="a"
-              href="https://twitter.com/medinternia"
+              href="https://x.com/medinternia"
               target="_blank"
               rel="noopener noreferrer"
               sx={{ color: '#fff', backgroundColor: 'rgba(255,255,255,0.1)', '&:hover': { background: 'rgba(255,255,255,0.2)' }, p: 1 }}
             >
-              <Twitter size={18} />
+              <X size={18} />
             </IconButton>
             <IconButton
               aria-label="Instagram"
