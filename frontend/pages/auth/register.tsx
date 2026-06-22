@@ -46,6 +46,12 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [otherRelation, setotherRelation] = useState(false);
+  const [otherRelationValue, setotherRelationValue] = useState('');
+  const [othermedicalHistory, setothermedicalHistory] = useState(false);
+  const [otherMedicalHistoryValue, setotherMedicalHistoryValue] = useState('');
+  const [otherAllergies, setotherAllergies] = useState(false);
+  const [otherAllergiesValue, setotherAllergiesValue] = useState('');
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -86,6 +92,50 @@ export default function Register() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    switch (name) {
+      case 'otherRelationship':
+        setotherRelationValue(value);
+        break;
+      case 'emergencyContactRelationship':
+        if (value === 'Other') {
+          setotherRelation(true);
+        } else {
+          setotherRelation(false);
+          setotherRelationValue('');
+        }
+        break;
+
+      case 'otherMedicalHistory':
+        setotherMedicalHistoryValue(value);
+        break;
+
+      case 'medicalHistory':
+        if (value === 'Other') {
+          setothermedicalHistory(true);
+        }
+        else {
+          setothermedicalHistory(false);
+          setotherMedicalHistoryValue('');
+        }
+        break;
+
+      case 'otherAllergies':
+        setotherAllergiesValue(value);
+        break;
+      case 'allergies':
+        if (value === 'Other') {
+          setotherAllergies(true);
+        }
+        else {
+          setotherAllergies(false);
+          setotherAllergiesValue('');
+        }
+        break;
+
+      default:
+        break;
+    }
   };
 
   const validatePhone = (value: string) => /^\d{10}$/.test(value);
@@ -192,22 +242,21 @@ export default function Register() {
     const emergencyPhoneValidationError = getOptionalPhoneError(form.emergencyContactPhone, 'emergency contact number');
     const dob = form.dateOfBirth ? new Date(form.dateOfBirth) : null;
     const today = new Date();
-    
-    if(form.userType === 'patient' && form.phone===form.emergencyContactPhone){
+    if (form.userType === 'patient' && form.phone === form.emergencyContactPhone) {
       setError('Phone number and emergency contact number cannot be the same.');
       return;
     }
 
-    if(form.userType=='doctor' && parseInt(form.experience,10)<0) {
+    if (form.userType == 'doctor' && parseInt(form.experience, 10) < 0) {
       setError('Experience cannot be a negative number.');
       return;
     }
-    if(form.userType === 'doctor' && !/^[A-Za-z0-9\/\- ]{4,30}$/.test(form.licenseNumber)) {
+    if (form.userType === 'doctor' && !/^[A-Za-z0-9\/\- ]{4,30}$/.test(form.licenseNumber)) {
       setError('License number must be 4-30 characters and can include letters, numbers, spaces, slashes, or dashes.');
       return;
     }
     let age = today.getFullYear() - (dob ? dob.getFullYear() : today.getFullYear());
-    if(dob && dob > today) {
+    if (dob && dob > today) {
       setError('Date of birth cannot be in the future.');
       return;
     }
@@ -240,18 +289,34 @@ export default function Register() {
     try {
       // Build payload — omit empty optional ObjectId fields so Mongoose doesn't
       // try to cast an empty string to an ObjectId and throw a 400.
-      const payload: Record<string, any> = { ...form };
+      const payload: Record<string, any> = {
+        ...form,
+        emergencyContactRelationship:
+          form.emergencyContactRelationship === 'Other'
+            ? otherRelationValue
+            : form.emergencyContactRelationship,
+
+        medicalHistory:
+          form.medicalHistory === 'Other'
+            ? otherMedicalHistoryValue
+            : form.medicalHistory,
+
+        allergies:
+          form.allergies === 'Other'
+            ? otherAllergiesValue
+            : form.allergies,
+      };
       if (!payload.mentorDoctor) delete payload.mentorDoctor;
       if (!payload.phone) delete payload.phone;
       if (!payload.dateOfBirth) delete payload.dateOfBirth;
       if (!payload.gender) delete payload.gender;
-
-      const res=await api.post('/auth/register', payload);
+      console.log('Submitting payload:', payload);
+      const res = await api.post('/auth/register', payload);
       const user = res.data.data.user;
       localStorage.setItem('token', res.data.data.token);
       localStorage.setItem('userId', user._id || user.id);
       localStorage.setItem('user', JSON.stringify(user));
-        
+
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -547,6 +612,16 @@ export default function Register() {
                             <MenuItem value="Guardian">Guardian</MenuItem>
                             <MenuItem value="Other">Other</MenuItem>
                           </TextField>
+                          {otherRelation && (
+                            <TextField
+                              label="Please specify relationship"
+                              name="otherRelationship"
+                              fullWidth
+                              margin="normal"
+                              value={otherRelationValue}
+                              onChange={handleChange}
+                            />
+                          )}
                           <TextField
                             select
                             label="Medical History"
@@ -567,6 +642,16 @@ export default function Register() {
                             <MenuItem value="Cancer">Cancer</MenuItem>
                             <MenuItem value="Other">Other</MenuItem>
                           </TextField>
+                          {othermedicalHistory && (
+                            <TextField
+                              label="Please specify medical history"
+                              name="otherMedicalHistory"
+                              fullWidth
+                              margin="normal"
+                              value={otherMedicalHistoryValue}
+                              onChange={handleChange}
+                            />
+                          )}
                           <TextField
                             select
                             label="Allergies"
@@ -587,6 +672,16 @@ export default function Register() {
                             <MenuItem value="Animal Dander">Animal Dander</MenuItem>
                             <MenuItem value="Other">Other</MenuItem>
                           </TextField>
+                          {otherAllergies && (
+                            <TextField
+                              label="Please specify allergies"
+                              name="otherAllergies"
+                              fullWidth
+                              margin="normal"
+                              value={otherAllergiesValue}
+                              onChange={handleChange}
+                            />
+                          )}
                         </Box>
                       </Fade>
                     )}

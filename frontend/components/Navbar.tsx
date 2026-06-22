@@ -118,23 +118,8 @@ export default function Navbar({ route }: { route?: string }) {
       const token = localStorage.getItem("token");
       const role = getCurrentUserRole() || "";
       if (token) {
-        switch (role) {
-          case "doctor":
-            router.push("/dashboard/doctor");
-            return;
-          case "patient":
-            router.push("/dashboard/patient");
-            return;
-          case "intern":
-            router.push("/dashboard/intern");
-            return;
-          case "admin":
-            router.push("/dashboard/admin");
-            return;
-          default:
-            router.push("/dashboard");
-            return;
-        }
+        router.push("/dashboard");
+        return;
       }
     }
     router.push("/");
