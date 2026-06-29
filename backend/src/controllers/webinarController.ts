@@ -4,6 +4,49 @@ import Webinar from '../models/Webinar';
 import Notification from '../models/Notification';
 import User from '../models/User';
 
+const getWebinarEndTime = (webinar: { scheduledAt: Date; duration?: number }) => {
+  const durationInMinutes = webinar.duration || 0;
+  return new Date(new Date(webinar.scheduledAt).getTime() + durationInMinutes * 60 * 1000);
+};
+
+const isWebinarExpired = (webinar: { scheduledAt: Date; duration?: number; status: string }) => {
+  const now = new Date();
+
+  if (webinar.status === 'completed' || webinar.status === 'cancelled') {
+    return true;
+  }
+
+  if (webinar.status === 'live') {
+    return getWebinarEndTime(webinar) <= now;
+  }
+
+  return new Date(webinar.scheduledAt) <= now;
+};
+
+const syncExpiredWebinars = async () => {
+  const now = new Date();
+
+  await Webinar.updateMany(
+    {
+      status: 'scheduled',
+      scheduledAt: { $lte: now }
+    },
+    { $set: { status: 'completed' } }
+  );
+
+  const liveWebinars = await Webinar.find({ status: 'live' }).select('scheduledAt duration status');
+  const expiredLiveIds = liveWebinars
+    .filter(webinar => isWebinarExpired(webinar))
+    .map(webinar => webinar._id);
+
+  if (expiredLiveIds.length > 0) {
+    await Webinar.updateMany(
+      { _id: { $in: expiredLiveIds } },
+      { $set: { status: 'completed' } }
+    );
+  }
+};
+
 // Create webinar
 export const createWebinar = async (req: AuthRequest, res: Response) => {
   try {
@@ -20,11 +63,11 @@ export const createWebinar = async (req: AuthRequest, res: Response) => {
       tags
     } = req.body;
 
-    // Only doctors can create webinars
-    if (req.user!.userType !== 'doctor') {
+    // Webinar managers can create webinars after route-level permission checks.
+    if (req.user!.userType !== 'doctor' && req.user!.userType !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Only doctors can create webinars'
+        message: 'Only doctors or admins can create webinars'
       });
     }
 
@@ -53,7 +96,7 @@ export const createWebinar = async (req: AuthRequest, res: Response) => {
     const interns = await User.find({ userType: 'intern' });
       const notifications = interns.map(intern => ({
         recipient: intern._id,
-        message: `New webinar scheduled: ${webinar.title} by Dr. ${host.firstName} ${host.lastName}`,
+        message: `New webinar scheduled: ${webinar.title} by ${host.firstName} ${host.lastName}`,
         type: 'webinar',
         link: webinar.meetingLink
       }));
@@ -76,6 +119,8 @@ export const createWebinar = async (req: AuthRequest, res: Response) => {
 // Get all webinars with filtering
 export const getWebinars = async (req: Request, res: Response) => {
   try {
+    await syncExpiredWebinars();
+
     const {
       type,
       specialization,
@@ -94,8 +139,12 @@ export const getWebinars = async (req: Request, res: Response) => {
     if (status) filter.status = status;
     
     if (upcoming === 'true') {
-      filter.scheduledAt = { $gte: new Date() };
+      const now = new Date();
       filter.status = { $in: ['scheduled', 'live'] };
+      filter.$or = [
+        { scheduledAt: { $gt: now } },
+        { status: 'live' }
+      ];
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -131,6 +180,8 @@ export const getWebinars = async (req: Request, res: Response) => {
 // Get webinar by ID
 export const getWebinarById = async (req: Request, res: Response) => {
   try {
+    await syncExpiredWebinars();
+
     const { id } = req.params;
 
     const webinar = await Webinar.findById(id)
@@ -160,6 +211,8 @@ export const getWebinarById = async (req: Request, res: Response) => {
 // Register for webinar
 export const registerForWebinar = async (req: AuthRequest, res: Response) => {
   try {
+    await syncExpiredWebinars();
+
     const { id } = req.params;
     const userId = req.user!._id;
 
@@ -168,6 +221,13 @@ export const registerForWebinar = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({
         success: false,
         message: 'Webinar not found'
+      });
+    }
+
+    if (isWebinarExpired(webinar) || webinar.status !== 'scheduled') {
+      return res.status(400).json({
+        success: false,
+        message: 'This webinar has expired and registration is closed'
       });
     }
 
@@ -224,6 +284,8 @@ export const registerForWebinar = async (req: AuthRequest, res: Response) => {
 // Unregister from webinar
 export const unregisterFromWebinar = async (req: AuthRequest, res: Response) => {
   try {
+    await syncExpiredWebinars();
+
     const { id } = req.params;
     const userId = (req.user!._id as any).toString();
 
@@ -236,7 +298,7 @@ export const unregisterFromWebinar = async (req: AuthRequest, res: Response) => 
     }
 
     // Check if webinar has already started
-    if (webinar.status === 'live' || webinar.status === 'completed') {
+    if (webinar.status === 'live' || webinar.status === 'completed' || new Date(webinar.scheduledAt) <= new Date()) {
       return res.status(400).json({
         success: false,
         message: 'Cannot unregister from a webinar that has started or completed'
@@ -441,6 +503,8 @@ export const getUserWebinars = async (req: AuthRequest, res: Response) => {
 // Generate meeting link (for integration with video conferencing)
 export const generateMeetingLink = async (req: AuthRequest, res: Response) => {
   try {
+    await syncExpiredWebinars();
+
     const { id } = req.params;
     const hostId = (req.user!._id as any).toString();
 
@@ -449,6 +513,13 @@ export const generateMeetingLink = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({
         success: false,
         message: 'Webinar not found or you are not authorized'
+      });
+    }
+
+    if (isWebinarExpired(webinar)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot generate a meeting link for an expired webinar'
       });
     }
 

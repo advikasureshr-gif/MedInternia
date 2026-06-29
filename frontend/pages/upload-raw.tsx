@@ -14,7 +14,9 @@ import {
   Stack,
   Divider,
   Avatar,
-  CircularProgress
+  CircularProgress,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
@@ -334,6 +336,127 @@ export default function UploadRawPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCase, setSelectedCase] = useState<any>(null);
 
+  // Form state
+  const [formData, setFormData] = useState({
+    personName: "",
+    date: "",
+    location: "",
+    doctorName: "",
+    ayushmanId: "",
+    additionalMedicalData: "",
+  });
+
+  // Validation errors
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Success/Error snackbar
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // File state
+  const [medicalFiles, setMedicalFiles] = useState<File[]>([]);
+  const [bills, setBills] = useState<File[]>([]);
+
+  // Handle form input changes
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle file input changes
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "medical" | "bills") => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (type === "medical") {
+        setMedicalFiles((prev) => [...prev, ...files]);
+      } else {
+        setBills((prev) => [...prev, ...files]);
+      }
+    }
+  };
+
+  // Remove a file
+  const handleRemoveFile = (index: number, type: "medical" | "bills") => {
+    if (type === "medical") {
+      setMedicalFiles((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setBills((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.personName.trim()) {
+      newErrors.personName = "Person Name is required";
+    }
+    if (!formData.date.trim()) {
+      newErrors.date = "Date is required";
+    }
+    if (!formData.location.trim()) {
+      newErrors.location = "Location is required";
+    }
+    if (!formData.doctorName.trim()) {
+      newErrors.doctorName = "Doctor Name is required";
+    }
+    if (!formData.ayushmanId.trim()) {
+      newErrors.ayushmanId = "Ayushman Reference ID is required";
+    }
+    if (!formData.additionalMedicalData.trim()) {
+      newErrors.additionalMedicalData = "Please enter all required patient information before proceeding";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fill in all required fields",
+        severity: "error",
+      });
+      return;
+    }
+
+    // Simulate successful submission (replace with actual API call if needed)
+    console.log("Form submitted:", { formData, medicalFiles, bills });
+
+    setSnackbar({
+      open: true,
+      message: "Medical case submitted successfully!",
+      severity: "success",
+    });
+
+    // Reset form
+    setFormData({
+      personName: "",
+      date: "",
+      location: "",
+      doctorName: "",
+      ayushmanId: "",
+      additionalMedicalData: "",
+    });
+    setMedicalFiles([]);
+    setBills([]);
+    setErrors({});
+  };
+
   return (
     <Box
       sx={{
@@ -406,83 +529,179 @@ export default function UploadRawPage() {
           >
             Your data is hidden and secured. It will not be copied or shared with anyone else.
           </Typography>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField label="Person Name" fullWidth variant="outlined" sx={{ mb: { xs: 2, sm: 0 } }} />
-            <TextField label="Date" type="date" fullWidth variant="outlined" InputLabelProps={{ shrink: true }} />
-          </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={2}>
-            <TextField label="Location" fullWidth variant="outlined" />
-            <TextField label="Doctor Name" fullWidth variant="outlined" />
-          </Stack>
-          <TextField label="Ayushman Reference ID" fullWidth variant="outlined" sx={{ mt: 2 }} />
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={3} mb={1}>
+          <form onSubmit={handleSubmit}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="Person Name"
+                fullWidth
+                variant="outlined"
+                required
+                value={formData.personName}
+                onChange={(e) => handleInputChange("personName", e.target.value)}
+                error={!!errors.personName}
+                helperText={errors.personName}
+                sx={{ mb: { xs: 2, sm: 0 } }}
+              />
+              <TextField
+                label="Date"
+                type="date"
+                fullWidth
+                variant="outlined"
+                required
+                InputLabelProps={{ shrink: true }}
+                value={formData.date}
+                onChange={(e) => handleInputChange("date", e.target.value)}
+                error={!!errors.date}
+                helperText={errors.date}
+              />
+            </Stack>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={2}>
+              <TextField
+                label="Location"
+                fullWidth
+                variant="outlined"
+                required
+                value={formData.location}
+                onChange={(e) => handleInputChange("location", e.target.value)}
+                error={!!errors.location}
+                helperText={errors.location}
+              />
+              <TextField
+                label="Doctor Name"
+                fullWidth
+                variant="outlined"
+                required
+                value={formData.doctorName}
+                onChange={(e) => handleInputChange("doctorName", e.target.value)}
+                error={!!errors.doctorName}
+                helperText={errors.doctorName}
+              />
+            </Stack>
+            <TextField
+              label="Ayushman Reference ID"
+              fullWidth
+              variant="outlined"
+              required
+              value={formData.ayushmanId}
+              onChange={(e) => handleInputChange("ayushmanId", e.target.value)}
+              error={!!errors.ayushmanId}
+              helperText={errors.ayushmanId}
+              sx={{ mt: 2 }}
+            />
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={3} mb={1}>
+              <Button
+                variant="contained"
+                component="label"
+                sx={{
+                  borderRadius: 2,
+                  fontWeight: 700,
+                  background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
+                  color: "#fff",
+                  boxShadow: "0 2px 8px #2193b033",
+                  "&:hover": {
+                    background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
+                    boxShadow: "0 4px 16px #2193b055",
+                  },
+                }}
+              >
+                Upload Medical Files
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  onChange={(e) => handleFileChange(e, "medical")}
+                />
+              </Button>
+              <Button
+                variant="outlined"
+                component="label"
+                sx={{
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  borderColor: "#2193b0",
+                  color: "#2193b0",
+                  "&:hover": {
+                    background: "#e0f7fa",
+                    borderColor: "#1565c0",
+                    color: "#1565c0",
+                  },
+                }}
+              >
+                Upload Bills (Optional)
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  onChange={(e) => handleFileChange(e, "bills")}
+                />
+              </Button>
+            </Stack>
+
+            {/* Display uploaded medical files */}
+            {medicalFiles.length > 0 && (
+              <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {medicalFiles.map((file, index) => (
+                  <Chip
+                    key={index}
+                    label={file.name}
+                    onDelete={() => handleRemoveFile(index, "medical")}
+                    sx={{ bgcolor: "#e3f2fd", color: "#1565c0" }}
+                  />
+                ))}
+              </Box>
+            )}
+
+            {/* Display uploaded bills */}
+            {bills.length > 0 && (
+              <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {bills.map((file, index) => (
+                  <Chip
+                    key={index}
+                    label={file.name}
+                    onDelete={() => handleRemoveFile(index, "bills")}
+                    sx={{ bgcolor: "#fff3e0", color: "#e65100" }}
+                  />
+                ))}
+              </Box>
+            )}
+
+            <TextField
+              label="Additional Medical Data"
+              multiline
+              minRows={3}
+              fullWidth
+              variant="outlined"
+              required
+              value={formData.additionalMedicalData}
+              onChange={(e) => handleInputChange("additionalMedicalData", e.target.value)}
+              error={!!errors.additionalMedicalData}
+              helperText={errors.additionalMedicalData || "Enter symptoms, diagnosis, treatment details, medications prescribed, or any other relevant medical information..."}
+              sx={{ mb: 2, mt: 2 }}
+              placeholder="Enter symptoms, diagnosis, treatment details, medications prescribed, or any other relevant medical information..."
+            />
             <Button
+              type="submit"
               variant="contained"
-              component="label"
               sx={{
                 borderRadius: 2,
                 fontWeight: 700,
+                fontSize: 16,
+                mt: 1,
+                px: 4,
                 background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
                 color: "#fff",
-                boxShadow: "0 2px 8px #2193b033",
+                boxShadow: "0 2px 12px #2193b044",
                 "&:hover": {
                   background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
-                  boxShadow: "0 4px 16px #2193b055",
+                  boxShadow: "0 4px 20px #2193b066",
+                  transform: "scale(1.03)",
                 },
+                transition: "transform 0.2s",
               }}
             >
-              Upload Medical Files
-              <input type="file" hidden multiple />
+              Submit Case
             </Button>
-            <Button
-              variant="outlined"
-              component="label"
-              sx={{
-                borderRadius: 2,
-                fontWeight: 600,
-                borderColor: "#2193b0",
-                color: "#2193b0",
-                "&:hover": {
-                  background: "#e0f7fa",
-                  borderColor: "#1565c0",
-                  color: "#1565c0",
-                },
-              }}
-            >
-              Upload Bills (Optional)
-              <input type="file" hidden multiple />
-            </Button>
-          </Stack>
-          <TextField
-            label="Additional Medical Data"
-            multiline
-            minRows={3}
-            fullWidth
-            variant="outlined"
-            sx={{ mb: 2, mt: 2 }}
-            placeholder="Enter symptoms, diagnosis, treatment details, medications prescribed, or any other relevant medical information..."
-          />
-          <Button
-            variant="contained"
-            sx={{
-              borderRadius: 2,
-              fontWeight: 700,
-              fontSize: 16,
-              mt: 1,
-              px: 4,
-              background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
-              color: "#fff",
-              boxShadow: "0 2px 12px #2193b044",
-              "&:hover": {
-                background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
-                boxShadow: "0 4px 20px #2193b066",
-                transform: "scale(1.03)",
-              },
-              transition: "transform 0.2s",
-            }}
-          >
-            Submit Case
-          </Button>
+          </form>
         </Card>
       </Box>
 
@@ -606,6 +825,23 @@ export default function UploadRawPage() {
         </Stack>
       </Box>
       <CaseDetailsDialog open={openDialog} onClose={() => setOpenDialog(false)} caseData={selectedCase} />
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: "100%", fontWeight: 600 }}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

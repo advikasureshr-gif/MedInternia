@@ -1,4 +1,5 @@
 import videoRoutes from './video';
+import chatbotRoutes from './chatbot';
 import researchPaperRoutes from './researchPapers';
 import { Router, Request, Response } from 'express';
 import authRoutes from './auth';
@@ -16,7 +17,7 @@ import integrationRoutes from './integration';
 import notificationRoutes from './notifications';
 import diseaseInsightRoutes from './diseaseInsights';
 import symptomRoutes from './symptoms';
-
+import diaryRoutes from "./diary";
 const router = Router();
 
 router.get('/', (req: Request, res: Response) => {
@@ -39,6 +40,7 @@ router.get('/', (req: Request, res: Response) => {
       patients: '/api/patients',
       doctors: '/api/doctors',
       cases: '/api/cases',
+      aiCasePosts: '/api/cases/ai-posts',
       diseaseInsights: '/api/ai-disease-insights',
       badges: '/api/badges',
       peerReviews: '/api/peer-reviews',
@@ -60,6 +62,7 @@ router.get('/test', (req: Request, res: Response) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/chatbot', chatbotRoutes);
 router.use('/video', videoRoutes);
 router.use('/users', userRoutes);
 router.use('/patients', patientRoutes);
@@ -76,5 +79,6 @@ router.use('/integration', integrationRoutes);
 router.use('/symptoms', symptomRoutes);
 router.use('/', enhancedRoutes);
 router.use('/research-papers', researchPaperRoutes);
+router.use("/diaries", diaryRoutes);
 
 export default router;

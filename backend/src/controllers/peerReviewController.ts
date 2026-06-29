@@ -1,3 +1,4 @@
+import { createAndEmitNotification } from './notificationController';
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import PeerReview from '../models/PeerReview';
@@ -18,11 +19,11 @@ export const submitPeerReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if reviewer is an intern
-    if (req.user!.userType !== 'intern') {
+    // Check if reviewer is allowed by the route-level role guard.
+    if (req.user!.userType !== 'intern' && req.user!.userType !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Only interns can submit peer reviews'
+        message: 'Only interns or admins can submit peer reviews'
       });
     }
 
@@ -88,6 +89,15 @@ export const submitPeerReview = async (req: AuthRequest, res: Response) => {
       { path: 'reviewer', select: 'firstName lastName userType' },
       { path: 'reviewee', select: 'firstName lastName userType' }
     ]);
+     // Notify reviewee about peer review
+    await createAndEmitNotification({
+      recipientId: revieweeId,
+      type:        'peer_review',
+      message:     `You received a peer review with a rating of ${peerReview.rating}/5`,
+      link:        `/peer-reviews/${peerReview._id}`,
+      payload:     { peerReviewId: peerReview._id, rating: peerReview.rating },
+    });
+
 
     res.status(201).json({
       success: true,

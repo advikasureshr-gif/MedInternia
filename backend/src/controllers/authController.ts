@@ -1,236 +1,253 @@
 import nodemailer from 'nodemailer';
-const otpStore: Record<string, string> = {};
+import bcrypt from 'bcryptjs';
 import { Request, Response } from 'express';
 import User, { IUser } from '../models/User';
+import Otp from '../models/Otp';
 import { generateToken } from '../utils/jwt';
 import { AuthRequest } from '../middleware/auth';
 import { uploadProfileImage } from '../utils/cloudinary';
+import { asyncHandler } from "../utils/asyncHandler";
+import { AppError } from "../utils/AppError";
+
+// --- OTP configuration -----------------------------------------------------
+const OTP_TTL_MS = 10 * 60 * 1000; // OTP valid for 10 minutes
+const OTP_MAX_ATTEMPTS = 5; // after 5 wrong tries the OTP is invalidated
+
+const generateOtpCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const issueOtp = async (email: string, purpose: 'signup' | 'reset') => {
+  const otp = generateOtpCode();
+  const otpHash = await bcrypt.hash(otp, 10);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await Otp.findOneAndUpdate(
+    { email, purpose },
+    { otpHash, expiresAt, attempts: 0 },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  return otp;
+};
+
+const consumeOtp = async (
+  email: string,
+  purpose: 'signup' | 'reset',
+  submittedOtp: string
+): Promise<{ valid: boolean; message?: string }> => {
+  const record = await Otp.findOne({ email, purpose });
+
+  if (!record) {
+    return { valid: false, message: 'OTP not found or already used. Please request a new one.' };
+  }
+
+  if (record.expiresAt.getTime() < Date.now()) {
+    await Otp.deleteOne({ _id: record._id });
+    return { valid: false, message: 'OTP has expired. Please request a new one.' };
+  }
+
+  if (record.attempts >= OTP_MAX_ATTEMPTS) {
+    await Otp.deleteOne({ _id: record._id });
+    return { valid: false, message: 'Too many incorrect attempts. Please request a new OTP.' };
+  }
+
+  const isMatch = await bcrypt.compare(submittedOtp, record.otpHash);
+
+  if (!isMatch) {
+    record.attempts += 1;
+    await record.save();
+    return { valid: false, message: 'Invalid OTP' };
+  }
+
+  await Otp.deleteOne({ _id: record._id });
+  return { valid: true };
+};
 
 // Upload profile picture
-export const uploadProfilePicture = async (req: AuthRequest, res: Response) => {
-  try {
+export const uploadProfilePicture = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
     if (!req.user) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
+      throw new AppError("User not authenticated", 401);
     }
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+      throw new AppError("No file uploaded", 400);
     }
 
-    const uploadResult = await uploadProfileImage(req.file, String(req.user._id));
+    const uploadResult = await uploadProfileImage(
+      req.file,
+      String(req.user._id),
+    );
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { profilePicture: uploadResult.secure_url },
-      { new: true, runValidators: true }
-    ).select('-password');
+      { new: true, runValidators: true },
+    ).select("-password");
 
     if (!updatedUser) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      throw new AppError("User not found", 404);
     }
 
-    return res.json({
+    res.json({
       success: true,
-      message: 'Profile picture updated successfully',
+      message: "Profile picture updated successfully",
       data: {
         user: updatedUser,
         profilePicture: {
           url: uploadResult.secure_url,
-          publicId: uploadResult.public_id
-        }
-      }
+          publicId: uploadResult.public_id,
+        },
+      },
     });
-  } catch (error) {
-    console.error('Upload profile picture error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Internal server error'
-    });
-  }
-};
+  },
+);
 
 // Register a new user (patient or doctor)
-export const register = async (req: Request, res: Response) => {
-  try {
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      userType,
-      phone,
-      dateOfBirth,
-      gender,
-      address,
-      // Doctor specific
-      specialization,
-      licenseNumber,
-      experience,
-      qualifications,
-      // Intern specific
-      medicalSchool,
-      yearOfStudy,
-      interests,
-      mentorDoctor,
-      // Patient specific
-      emergencyContact,
-      medicalHistory,
-      allergies
-    } = req.body;
+export const register = asyncHandler(async (req: Request, res: Response) => {
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    userType,
+    phone,
+    dateOfBirth,
+    gender,
+    address,
+    // Doctor specific
+    specialization,
+    licenseNumber,
+    experience,
+    qualifications,
+    // Intern specific
+    medicalSchool,
+    yearOfStudy,
+    interests,
+    mentorDoctor,
+    // Patient specific
+    emergencyContact,
+    medicalHistory,
+    allergies,
+  } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
-    }
-
-    // Validate required fields based on user type
-    if (userType === 'doctor') {
-      if (!specialization || !licenseNumber) {
-        return res.status(400).json({
-          success: false,
-          message: 'Specialization and license number are required for doctors'
-        });
-      }
-
-      // Check if license number already exists
-      const existingLicense = await User.findOne({ licenseNumber });
-      if (existingLicense) {
-        return res.status(400).json({
-          success: false,
-          message: 'Doctor with this license number already exists'
-        });
-      }
-    }
-
-    if (userType === 'intern') {
-      if (!medicalSchool || !yearOfStudy) {
-        return res.status(400).json({
-          success: false,
-          message: 'Medical school and year of study are required for interns'
-        });
-      }
-    }
-
-    // Create user object
-    const userData: Partial<IUser> = {
-      firstName,
-      lastName,
-      email,
-      password,
-      userType,
-      phone,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-      gender,
-      address
-    };
-
-    // Add doctor-specific fields
-    if (userType === 'doctor') {
-      userData.specialization = specialization;
-      userData.licenseNumber = licenseNumber;
-      userData.experience = experience;
-      userData.qualifications = qualifications;
-    }
-
-    // Add intern-specific fields
-    if (userType === 'intern') {
-      userData.medicalSchool = medicalSchool;
-      userData.yearOfStudy = yearOfStudy;
-      userData.interests = interests;
-      userData.mentorDoctor = mentorDoctor;
-    }
-
-    // Add patient-specific fields
-    if (userType === 'patient') {
-      userData.emergencyContact = emergencyContact;
-      userData.medicalHistory = medicalHistory;
-      userData.allergies = allergies;
-    }
-
-    // Create new user
-    const user = new User(userData);
-    await user.save();
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: (user._id as any).toString(),
-      email: user.email,
-      userType: user.userType
-    });
-
-    // Remove password from response
-    const userResponse = user.toObject() as any;
-    delete userResponse.password;
-    // If the user is an intern, create notifications for all future webinars
-    if (user.userType === 'intern') {
-      const Webinar = require('../models/Webinar').default;
-      const Notification = require('../models/Notification').default;
-  // Find all webinars (past and future)
-  const webinars = await Webinar.find({});
-      const notifications = [];
-      for (const webinar of webinars) {
-        // Populate host for message
-        await webinar.populate('host', 'firstName lastName');
-        const host = webinar.host as any;
-        notifications.push({
-          recipient: user._id,
-          message: `New webinar scheduled: ${webinar.title} by Dr. ${host.firstName} ${host.lastName}`,
-          type: 'webinar',
-          link: webinar.meetingLink
-        });
-      }
-      if (notifications.length > 0) {
-        await Notification.insertMany(notifications);
-      }
-    }
-
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      data: {
-        user: userResponse,
-        token
-      }
-    });
-  } catch (error: any) {
-    console.error('Registration error:', error);
-    
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map((err: any) => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors
-      });
-    }
-
-    // Handle duplicate key errors
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern)[0];
-      return res.status(400).json({
-        success: false,
-        message: `${field} already exists`
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  // Check if user already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new AppError("User with this email already exists", 400);
   }
-};
+
+  // Validate required fields based on user type
+  if (userType === "doctor") {
+    if (!specialization || !licenseNumber) {
+      throw new AppError(
+        "Specialization and license number are required for doctors",
+        400,
+      );
+    }
+
+    // Check if license number already exists
+    const existingLicense = await User.findOne({ licenseNumber });
+    if (existingLicense) {
+      throw new AppError("Doctor with this license number already exists", 409);
+    }
+  }
+
+  if (userType === "intern") {
+    if (!medicalSchool || !yearOfStudy) {
+      throw new AppError(
+        "Medical school and year of study are required for interns",
+        400,
+      );
+    }
+  }
+
+  // Create user object
+  const userData: Partial<IUser> = {
+    firstName,
+    lastName,
+    email,
+    password,
+    userType,
+    phone,
+    dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+    gender,
+    address,
+  };
+
+  // Add doctor-specific fields
+  if (userType === "doctor") {
+    userData.specialization = specialization;
+    userData.licenseNumber = licenseNumber;
+    userData.experience = experience;
+    userData.qualifications = qualifications;
+  }
+
+  // Add intern-specific fields
+  if (userType === "intern") {
+    userData.medicalSchool = medicalSchool;
+    userData.yearOfStudy = yearOfStudy;
+    userData.interests = interests;
+    userData.mentorDoctor = mentorDoctor;
+  }
+
+  // Add patient-specific fields
+  if (userType === "patient") {
+    userData.emergencyContact = emergencyContact;
+    userData.medicalHistory = medicalHistory;
+    userData.allergies = allergies;
+  }
+
+  // Create new user
+  const user = new User(userData);
+  await user.save();
+
+  // Generate JWT token
+  const token = generateToken({
+    userId: (user._id as any).toString(),
+    email: user.email,
+    userType: user.userType,
+  });
+
+  // Remove password from response
+  const userResponse = user.toObject() as any;
+  delete userResponse.password;
+
+  // If the user is an intern, create notifications for all future webinars
+  if (user.userType === "intern") {
+    const Webinar = require("../models/Webinar").default;
+    const Notification = require("../models/Notification").default;
+    // Find all webinars (past and future)
+    const webinars = await Webinar.find({});
+    const notifications = [];
+    for (const webinar of webinars) {
+      // Populate host for message
+      await webinar.populate("host", "firstName lastName");
+      const host = webinar.host as any;
+      notifications.push({
+        recipient: user._id,
+        message: `New webinar scheduled: ${webinar.title} by Dr. ${host.firstName} ${host.lastName}`,
+        type: "webinar",
+        link: webinar.meetingLink,
+      });
+    }
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
+    }
+  }
+
+  res.status(201).json({
+    success: true,
+    message: "User registered successfully",
+    data: {
+      user: userResponse,
+      token,
+    },
+  });
+});
 
 export const sendOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ success: false, message: 'Email required' });
-  // Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email] = otp;
-  // Send OTP via email (simple nodemailer example)
+  const otp = await issueOtp(email, 'signup');
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
@@ -244,131 +261,103 @@ export const sendOtp = async (req: Request, res: Response) => {
       from: process.env.EMAIL_USER,
       to: email,
       subject: 'MedInternia Email Verification OTP',
-      text: `Your OTP is: ${otp}`
+      text: `Your OTP is: ${otp}. It will expire in 10 minutes.`
     });
     return res.json({ success: true });
   } catch (err) {
+    console.error('Send OTP email error:', err);
     return res.status(500).json({ success: false, message: 'Failed to send OTP' });
   }
 };
 
-export const verifyOtp = (req: Request, res: Response) => {
+export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ success: false, message: 'Email and OTP required' });
-  if (otpStore[email] === otp) {
-    delete otpStore[email];
-    return res.json({ success: true });
+  if (!email || !otp) {
+    throw new AppError('Email and OTP required', 400);
   }
-  return res.json({ success: false, message: 'Invalid OTP' });
-};
+
+  const result = await consumeOtp(email, 'signup', otp);
+  if (!result.valid) {
+    throw new AppError(result.message || 'Invalid OTP', 400);
+  }
+  res.json({ success: true });
+});
 
 // Login user
-export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
+export const login = asyncHandler(async (req: Request, res: Response) => {
+  const { email, password } = req.body;
 
-    // Validate input
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
-      });
-    }
-
-    // Find user and include password for comparison
-    const user = await User.findOne({ email }).select('+password');
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Check if account is active
-    if (!user.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Account is deactivated. Please contact support.'
-      });
-    }
-
-    // Compare password
-    const isPasswordValid = await user.comparePassword(password);
-    
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: (user._id as any).toString(),
-      email: user.email,
-      userType: user.userType
-    });
-
-    // Remove password from response
-    const userResponse = user.toObject() as any;
-    delete userResponse.password;
-
-    res.json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        user: userResponse,
-        token
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  // Validate input
+  if (!email || !password) {
+    throw new AppError("Email and password are required", 400);
   }
-};
+
+  // Find user and include password for comparison
+  const user = await User.findOne({ email }).select("+password");
+
+  if (!user) {
+    throw new AppError("Invalid email or password", 401);
+  }
+
+  // Check if account is active
+  if (!user.isActive) {
+    throw new AppError("Account is deactivated. Please contact support.", 401);
+  }
+
+  // Compare password
+  const isPasswordValid = await user.comparePassword(password);
+
+  if (!isPasswordValid) {
+    throw new AppError("Invalid email or password", 401);
+  }
+
+  // Generate JWT token
+  const token = generateToken({
+    userId: (user._id as any).toString(),
+    email: user.email,
+    userType: user.userType,
+  });
+
+  // Remove password from response
+  const userResponse = user.toObject() as any;
+  delete userResponse.password;
+
+  res.json({
+    success: true,
+    message: "Login successful",
+    data: {
+      user: userResponse,
+      token,
+    },
+  });
+});
 
 // Get current user profile
-export const getProfile = async (req: AuthRequest, res: Response) => {
-  try {
+export const getProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user;
-    
+
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
+      throw new AppError("User not authenticated", 401);
     }
 
     res.json({
       success: true,
       data: {
-        user
-      }
+        user,
+      },
     });
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-};
+  },
+);
 
 // Update user profile
-export const updateProfile = async (req: AuthRequest, res: Response) => {
-  try {
+export const updateProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user;
     const updates = req.body;
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
+      throw new AppError("User not authenticated", 401);
     }
 
     // Remove sensitive fields that shouldn't be updated this way
@@ -378,90 +367,59 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     delete updates.isActive;
     delete updates.isVerified;
 
-    const updatedUser = await User.findByIdAndUpdate(
-      user._id,
-      updates,
-      { new: true, runValidators: true }
-    ).select('-password');
+    const updatedUser = await User.findByIdAndUpdate(user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
 
     if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      throw new AppError("User not found", 404);
     }
 
     res.json({
       success: true,
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
       data: {
-        user: updatedUser
-      }
+        user: updatedUser,
+      },
     });
-  } catch (error: any) {
-    console.error('Update profile error:', error);
-    
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map((err: any) => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-};
+  },
+);
 
 // Change password
-export const changePassword = async (req: AuthRequest, res: Response) => {
-  try {
+export const changePassword = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user;
     const { currentPassword, newPassword } = req.body;
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
+      throw new AppError("User not authenticated", 401);
     }
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Current password and new password are required'
-      });
+      throw new AppError("Current password and new password are required", 400);
     }
 
     if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be at least 6 characters long'
-      });
+      throw new AppError(
+        "New password must be at least 6 characters long",
+        400,
+      );
     }
 
     // Get user with password
-    const userWithPassword = await User.findById(user._id).select('+password');
-    
+    const userWithPassword = await User.findById(user._id).select("+password");
+
     if (!userWithPassword) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      throw new AppError("User not found", 404);
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await userWithPassword.comparePassword(currentPassword);
-    
+    const isCurrentPasswordValid =
+      await userWithPassword.comparePassword(currentPassword);
+
     if (!isCurrentPasswordValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Current password is incorrect'
-      });
+      throw new AppError("Current password is incorrect", 400);
     }
 
     // Update password
@@ -470,58 +428,70 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     res.json({
       success: true,
-      message: 'Password changed successfully'
+      message: "Password changed successfully",
     });
-  } catch (error) {
-    console.error('Change password error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-};
+  },
+);
 
 // Forgot Password: Send OTP
-export const forgotPassword = async (req: Request, res: Response) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ success: false, message: 'Email required' });
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-  // Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email + '_reset'] = otp;
-  // Send OTP via email
-  try {
+export const forgotPassword = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+    if (!email) {
+      throw new AppError("Email required", 400);
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    // Generate OTP
+    const otp = await issueOtp(email, 'reset');
+
+    // Send OTP via email
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+      host: process.env.EMAIL_HOST || "smtp.ethereal.email",
       port: Number(process.env.EMAIL_PORT) || 587,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+        pass: process.env.EMAIL_PASS,
+      },
     });
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'MedInternia Password Reset OTP',
-      text: `Your password reset OTP is: ${otp}`
-    });
-    return res.json({ success: true });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to send OTP' });
-  }
-};
+
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "MedInternia Password Reset OTP",
+        text: `Your password reset OTP is: ${otp}. It will expire in 10 minutes.`,
+      });
+    } catch (err) {
+      throw new AppError("Failed to send OTP", 500);
+    }
+
+    res.json({ success: true });
+  },
+);
 
 // Reset Password
-export const resetPassword = async (req: Request, res: Response) => {
-  const { email, otp, newPassword } = req.body;
-  if (!email || !otp || !newPassword) return res.status(400).json({ success: false, message: 'All fields required' });
-  if (newPassword.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
-  if (otpStore[email + '_reset'] !== otp) return res.status(400).json({ success: false, message: 'Invalid OTP' });
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-  user.password = newPassword;
-  await user.save();
-  delete otpStore[email + '_reset'];
-  return res.json({ success: true, message: 'Password reset successfully' });
-};
+export const resetPassword = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      throw new AppError("All fields required", 400);
+    }
+    if (newPassword.length < 6) {
+      throw new AppError("Password must be at least 6 characters", 400);
+    }
+    const result = await consumeOtp(email, 'reset', otp);
+    if (!result.valid) {
+      throw new AppError(result.message || "Invalid OTP", 400);
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    user.password = newPassword;
+    await user.save();
+    return res.json({ success: true, message: 'Password reset successfully' });
+  },
+);

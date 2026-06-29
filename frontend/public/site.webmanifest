@@ -1,0 +1,7 @@
+{
+  "name": "MedInternia",
+  "short_name": "MedInternia",
+  "theme_color": "#1d8299",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

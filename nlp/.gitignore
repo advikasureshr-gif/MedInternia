@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# HuggingFace model cache (weights are huge, never commit)
+~/.cache/huggingface/
+.cache/
+
+# Environment
+.env
+
+# Mac
+.DS_Store

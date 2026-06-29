@@ -8,6 +8,7 @@ import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { motion } from 'framer-motion';
 import api from '../../utils/api';
+import PdfExportButton from '../../components/PdfExportButton';
 
 export default function CaseDiscussion({ id: propId, modalMode, hideDescription }: { id?: string, modalMode?: boolean, hideDescription?: boolean }) {
   const router = useRouter();
@@ -160,11 +161,17 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
   const isAuthor = userId && caseData?.author?.id === userId;
 
+  // Merge pinned and regular discussions for PDF export
+  const allDiscussions = [...pinned, ...discussions];
+
   return (
     <Container maxWidth="sm">
       <Box sx={{ my: 4 }}>
         {!hideDescription && <>
-          <Typography variant="h4" gutterBottom>{caseData.title}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="h4" gutterBottom sx={{ flex: 1 }}>{caseData.title}</Typography>
+            <PdfExportButton caseData={caseData} discussions={allDiscussions} />
+          </Box>
           <Typography variant="body1">{caseData.description}</Typography>
         </>}
           {pinned.length > 0 && (

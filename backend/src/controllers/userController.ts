@@ -1,8 +1,10 @@
 ﻿import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import User from '../models/User';
 import UserBadge from '../models/UserBadge';
 import Case from '../models/Case';
+import Certificate from '../models/Certificate';
 import { checkAndAwardAutoBadges } from './badgeController';
 
 // Define CaseSummary type for recentCases
@@ -14,12 +16,134 @@ interface CaseSummary {
   specialization: string;
 }
 
+interface MentorStats {
+  mentorScore: number;
+  casesPosted: number;
+  internsMentored: number;
+  certificatesIssued: number;
+  casesReviewed: number;
+  discussionCount: number;
+  likesReceived: number;
+  followUpsPosted: number;
+  averageRating: number;
+  mentoringCredits: number;
+  scoreBreakdown: {
+    casesPosted: number;
+    internsMentored: number;
+    certificatesIssued: number;
+    casesReviewed: number;
+    discussionEngagement: number;
+    likesReceived: number;
+    followUpsPosted: number;
+    ratingQuality: number;
+    mentoringCredits: number;
+  };
+  resumeSummary: string;
+}
+
+const toObjectId = (id: unknown) => {
+  return typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id;
+};
+
+const buildMentorResumeSummary = (doctor: any, stats: Omit<MentorStats, 'resumeSummary'>) => {
+  const name = `${doctor.firstName} ${doctor.lastName}`.trim();
+  const specialization = doctor.specialization ? ` in ${doctor.specialization}` : '';
+  return [
+    `${name} is a ${doctor.isVerifiedDoctor ? 'verified ' : ''}doctor${specialization}.`,
+    `Mentorship score: ${stats.mentorScore}.`,
+    `Posted ${stats.casesPosted} case(s), mentored ${stats.internsMentored} intern(s), reviewed ${stats.casesReviewed} case(s), and issued ${stats.certificatesIssued} certificate(s).`,
+    `Discussion engagement includes ${stats.discussionCount} comment(s), ${stats.likesReceived} like(s), and ${stats.followUpsPosted} follow-up update(s).`
+  ].join(' ');
+};
+
+const calculateMentorStats = async (doctor: any): Promise<MentorStats> => {
+  const doctorId = toObjectId(doctor._id);
+
+  const [
+    casesPosted,
+    internsMentored,
+    certificateStats,
+    engagementStats
+  ] = await Promise.all([
+    Case.countDocuments({ doctor: doctorId, isActive: true }),
+    User.countDocuments({ userType: 'intern', mentorDoctor: doctorId, isActive: true }),
+    Certificate.aggregate([
+      { $match: { doctor: doctorId } },
+      {
+        $group: {
+          _id: null,
+          certificatesIssued: { $sum: 1 },
+          casesReviewed: { $sum: '$casesReviewed' }
+        }
+      }
+    ]),
+    Case.aggregate([
+      { $match: { doctor: doctorId, isActive: true } },
+      {
+        $project: {
+          commentCount: { $size: { $ifNull: ['$comments', []] } },
+          likeCount: { $size: { $ifNull: ['$likes', []] } },
+          followUpCount: { $size: { $ifNull: ['$followUps', []] } }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          discussionCount: { $sum: '$commentCount' },
+          likesReceived: { $sum: '$likeCount' },
+          followUpsPosted: { $sum: '$followUpCount' }
+        }
+      }
+    ])
+  ]);
+
+  const certificatesIssued = certificateStats[0]?.certificatesIssued || 0;
+  const casesReviewed = certificateStats[0]?.casesReviewed || 0;
+  const discussionCount = engagementStats[0]?.discussionCount || 0;
+  const likesReceived = engagementStats[0]?.likesReceived || 0;
+  const followUpsPosted = engagementStats[0]?.followUpsPosted || 0;
+  const averageRating = Number(doctor.averageRating || 0);
+  const mentoringCredits = Number(doctor.mentoringCredits || 0);
+
+  const scoreBreakdown = {
+    casesPosted: casesPosted * 8,
+    internsMentored: internsMentored * 20,
+    certificatesIssued: certificatesIssued * 15,
+    casesReviewed: casesReviewed * 6,
+    discussionEngagement: discussionCount * 2,
+    likesReceived,
+    followUpsPosted: followUpsPosted * 5,
+    ratingQuality: Math.round(averageRating * 12),
+    mentoringCredits: mentoringCredits * 2
+  };
+
+  const mentorScore = Object.values(scoreBreakdown).reduce((sum, value) => sum + value, 0);
+  const baseStats = {
+    mentorScore,
+    casesPosted,
+    internsMentored,
+    certificatesIssued,
+    casesReviewed,
+    discussionCount,
+    likesReceived,
+    followUpsPosted,
+    averageRating,
+    mentoringCredits,
+    scoreBreakdown
+  };
+
+  return {
+    ...baseStats,
+    resumeSummary: buildMentorResumeSummary(doctor, baseStats)
+  };
+};
+
 // Get user profile
 export const getUserProfile = async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
 
-    if (!req.user || (req.user._id.toString() !== userId && req.user.userType !== 'admin')) {
+    if (!req.user || (String(req.user._id) !== userId && req.user.userType !== 'admin')) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden: cannot view other users\' profiles'
@@ -78,12 +202,15 @@ export const getUserProfile = async (req: AuthRequest, res: Response) => {
         specialization: c.specialization
       })) as CaseSummary[];
 
+    const mentorStats = user.userType === 'doctor' ? await calculateMentorStats(user) : null;
+
     res.json({
       success: true,
       data: {
         user: { ...user.toObject(), profileScore },
         badges,
         recentCases,
+        mentorStats,
         stats: {
           casesAnalyzed: user.casesAnalyzed,
           upvotesReceived: user.upvotesReceived,
@@ -159,7 +286,7 @@ export const getInternScorecard = async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
 
-    if (!req.user || (req.user._id.toString() !== userId && req.user.userType !== 'admin')) {
+    if (!req.user || (String(req.user._id) !== userId && req.user.userType !== 'admin')) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden: cannot view other users\' scorecards'
@@ -272,17 +399,48 @@ export const getLeaderboard = async (req: Request, res: Response) => {
   try {
     const { userType = 'intern', metric = 'points', limit = 50 } = req.query;
 
-    const validMetrics = ['points', 'casesAnalyzed', 'upvotesReceived', 'averageRating', 'streak'];
+    const validMetrics = ['points', 'casesAnalyzed', 'upvotesReceived', 'averageRating', 'streak', 'mentorScore'];
     const sortMetric = validMetrics.includes(metric as string) ? metric as string : 'points';
+    const limitNum = Math.max(1, Math.min(Number(limit) || 50, 100));
 
     const filter: any = { userType, isActive: true };
+
+    if (userType === 'doctor' && sortMetric === 'mentorScore') {
+      const doctors = await User.find(filter)
+        .select('firstName lastName profilePicture points casesAnalyzed upvotesReceived averageRating streak specialization experience mentoringCredits isVerifiedDoctor');
+
+      const doctorsWithMentorStats = await Promise.all(
+        doctors.map(async (doctor) => ({
+          ...doctor.toObject(),
+          mentorStats: await calculateMentorStats(doctor)
+        }))
+      );
+
+      const leaderboardWithRanks = doctorsWithMentorStats
+        .sort((a, b) => b.mentorStats.mentorScore - a.mentorStats.mentorScore)
+        .slice(0, limitNum)
+        .map((doctor, index) => ({
+          ...doctor,
+          rank: index + 1
+        }));
+
+      return res.json({
+        success: true,
+        data: {
+          leaderboard: leaderboardWithRanks,
+          metric: sortMetric,
+          total: leaderboardWithRanks.length
+        }
+      });
+    }
+
     const sort: any = {};
     sort[sortMetric] = -1;
 
     const leaderboard = await User.find(filter)
       .select('firstName lastName profilePicture points casesAnalyzed upvotesReceived averageRating streak medicalSchool specialization')
       .sort(sort)
-      .limit(Number(limit));
+      .limit(limitNum);
 
     // Add rank to each user
     const leaderboardWithRanks = leaderboard.map((user, index) => ({
@@ -307,6 +465,45 @@ export const getLeaderboard = async (req: Request, res: Response) => {
   }
 };
 
+// Get doctor mentor reputation summary
+export const getDoctorMentorSummary = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const doctor = await User.findOne({ _id: userId, userType: 'doctor', isActive: true })
+      .select('-password');
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    const mentorStats = await calculateMentorStats(doctor);
+
+    res.json({
+      success: true,
+      data: {
+        doctor: {
+          _id: doctor._id,
+          firstName: doctor.firstName,
+          lastName: doctor.lastName,
+          specialization: doctor.specialization,
+          isVerifiedDoctor: doctor.isVerifiedDoctor
+        },
+        mentorStats
+      }
+    });
+  } catch (error) {
+    console.error('Get doctor mentor summary error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 // Verify doctor (KYC process)
 export const verifyDoctor = async (req: AuthRequest, res: Response) => {
   try {
@@ -314,10 +511,10 @@ export const verifyDoctor = async (req: AuthRequest, res: Response) => {
     const { isVerified, verificationDocuments } = req.body;
 
     // Only admins or verified doctors can verify other doctors
-    if (req.user!.userType !== 'doctor' || !req.user!.isVerifiedDoctor) {
+    if (req.user!.userType !== 'admin' && (req.user!.userType !== 'doctor' || !req.user!.isVerifiedDoctor)) {
       return res.status(403).json({
         success: false,
-        message: 'Only verified doctors can verify other doctors'
+        message: 'Only admins or verified doctors can verify other doctors'
       });
     }
 
@@ -436,8 +633,8 @@ export const awardPointsToIntern = async (req: AuthRequest, res: Response) => {
     const doctor = req.user;
     const { internId } = req.params;
     const { points } = req.body;
-    if (!doctor || doctor.userType !== 'doctor') {
-      return res.status(403).json({ success: false, message: 'Only doctors can award points.' });
+    if (!doctor || (doctor.userType !== 'doctor' && doctor.userType !== 'admin')) {
+      return res.status(403).json({ success: false, message: 'Only doctors or admins can award points.' });
     }
     if (typeof points !== 'number' || points <= 0) {
       return res.status(400).json({ success: false, message: 'Points must be a positive number.' });
