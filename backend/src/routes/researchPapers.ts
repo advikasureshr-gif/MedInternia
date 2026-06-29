@@ -1,28 +1,30 @@
 import express from 'express';
 import { createResearchPaper, getAllResearchPapers, getResearchPaperById } from '../controllers/researchPaperController';
-import path from 'path';
-import fs from 'fs';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
 
 router.post('/', authenticate, requirePermission('import:run'), createResearchPaper);
 router.get('/', getAllResearchPapers);
+
 // Place specific routes BEFORE dynamic routes
-router.get('/download/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.resolve(__dirname, '../../uploads', filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({
-      success: false,
-      message: 'File not found',
-    });
+router.get('/download/:filename', authenticate, (req, res) => {
+  const filename = path.basename(req.params.filename);
+  if (!filename || filename.includes('..')) {
+    return res.status(400).json({ success: false, message: 'Invalid filename' });
   }
-
-  return res.download(filePath);
+  const safePath = path.resolve(__dirname, '../../uploads', filename);
+  if (!safePath.startsWith(path.resolve(__dirname, '../../uploads'))) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+  if (fs.existsSync(safePath)) {
+    return res.download(safePath);
+  }
+  return res.status(404).json({ success: false, message: 'File not found' });
 });
 
 router.get('/:id', getResearchPaperById);
