@@ -34,8 +34,8 @@ export default function PrivacyPage() {
           }}
         >
           <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-            <ShieldCheck size={42} color="#2193b0" />
-            <Typography variant="h2" fontWeight={900} color="#2193b0" sx={{ fontSize: { xs: "2.2rem", md: "3.5rem" } }}>
+            <ShieldCheck size={42} color="#0072ff" />
+            <Typography variant="h2" fontWeight={900} color="#0072ff" sx={{ fontSize: { xs: "2.2rem", md: "3.5rem" } }}>
               Privacy Policy
             </Typography>
           </Stack>
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
             {sections.map((section) => (
               <Box key={section.title} sx={{ p: 3, borderRadius: 3, bgcolor: "rgba(33,147,176,0.08)" }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
-                  <Lock size={18} color="#2193b0" />
+                  <Lock size={18} color="#0072ff" />
                   <Typography variant="h6" fontWeight={800}>
                     {section.title}
                   </Typography>

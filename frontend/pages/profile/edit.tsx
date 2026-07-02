@@ -66,7 +66,7 @@ interface ProfileFormData {
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#2193b0', // A professional, calming blue
+      main: '#0072ff', // A professional, calming blue
     },
     secondary: {
       main: '#00b09b', // An accent green for success
@@ -455,7 +455,7 @@ export default function EditProfilePage() {
                   border: '5px solid #fff',
                   boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
                   fontSize: 44,
-                  bgcolor: '#2193b0',
+                  bgcolor: '#0072ff',
                   color: '#fff',
                   transition: 'box-shadow 0.3s',
                 }}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
+  Container,
   Typography,
   Card,
   List,
@@ -9,15 +10,15 @@ import {
   ListItemText,
   Button,
   Chip,
-  IconButton,
   Tab,
   Tabs,
 } from "@mui/material";
-import AddIcon from '@mui/icons-material/Add';
 import api from '../utils/api';
 import WebinarJoin from "../components/WebinarJoin";
 import { canUser } from "../utils/permissions";
-import { hasAuthToken, redirectToLogin } from "../utils/authRedirect";
+import PageHeader from "../components/layout/PageHeader";
+import EmptyState from "../components/layout/EmptyState";
+import { Plus, Video } from "lucide-react";
 
 const getWebinarEndTime = (webinar: any) => {
   const duration = Number(webinar.duration || 0);
@@ -128,29 +129,30 @@ export default function WebinarsPage() {
 
 
   return (
-  <Box maxWidth={700} mx="auto" my={4} sx={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", mt: 10 }}>
-      <Card sx={{ p: 4, borderRadius: 4, boxShadow: "0 2px 12px #2193b022", background: "linear-gradient(120deg, #f8f9fa 0%, #e0eafc 100%)", width: "100%" }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h3" fontWeight={900} color="#1565c0" sx={{ letterSpacing: 1 }}>
-            Webinars
-          </Typography>
-          {canManageWebinars && (
-            <IconButton
+  <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 }, minHeight: "80vh" }}>
+      <PageHeader
+        title="Webinars"
+        subtitle="Join upcoming webinars, live AMAs, and expert sessions to expand your medical expertise."
+        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Webinars" }]}
+        action={
+          canManageWebinars ? (
+            <Button
               onClick={() => router.push('/webinars/create')}
-              color="primary"
-              sx={{ bgcolor: "#e3f2fd", borderRadius: 2 }}
-              aria-label="Add Webinar"
+              variant="contained"
+              startIcon={<Plus size={18} />}
             >
-              <AddIcon sx={{ fontSize: 32 }} />
-            </IconButton>
-          )}
-        </Box>
-        <Typography variant="subtitle1" color="text.secondary" mb={3} sx={{ fontSize: "1.12rem", fontWeight: 500 }}>
-          Join upcoming webinars and expand your medical expertise. Learn from top professionals and stay updated with the latest trends.
-        </Typography>
+              Create Webinar
+            </Button>
+          ) : null
+        }
+      />
+      <Card sx={{ p: { xs: 2, sm: 3 }, width: "100%" }}>
         <Tabs
           value={activeTab}
           onChange={(_, value) => setActiveTab(value)}
+          variant="scrollable"
+          allowScrollButtonsMobile
+          aria-label="Webinar status tabs"
           sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="Active Webinars" value="active" />
@@ -158,9 +160,11 @@ export default function WebinarsPage() {
         </Tabs>
         <List>
           {webinars.length === 0 ? (
-            <Typography color="text.secondary">
-              {activeTab === 'active' ? 'No active webinars available.' : 'No completed webinars available.'}
-            </Typography>
+            <EmptyState
+              icon={Video}
+              title={activeTab === 'active' ? 'No active webinars' : 'No completed webinars'}
+              description={activeTab === 'active' ? 'Upcoming expert sessions will appear here once they are scheduled.' : 'Completed webinar recordings and history will appear here.'}
+            />
           ) : (
             webinars.map((w, i) => {
               const expired = isWebinarExpired(w);
@@ -172,25 +176,28 @@ export default function WebinarsPage() {
               return (
               <ListItem
                 key={w._id}
-                sx={{ animation: `slideUp 0.6s ${i * 0.1}s both`, borderRadius: 3, mb: 2, boxShadow: "0 1px 4px #2193b022", background: "#fff" }}
+                sx={{
+                  animation: `slideUp 0.6s ${i * 0.1}s both`,
+                  borderRadius: 2,
+                  mb: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  background: "background.paper",
+                  transition: "box-shadow 0.2s ease, transform 0.2s ease",
+                  "&:hover": {
+                    boxShadow: (theme) => theme.custom.cardShadowHover,
+                    transform: "translateY(-2px)",
+                  },
+                  pr: { xs: 2, sm: 18 },
+                }}
                 secondaryAction={
                   canJoin ? (
                     <Button
                       variant="contained"
                       sx={{
-                        borderRadius: 3,
                         px: 3,
                         py: 1,
                         fontWeight: 700,
-                        fontSize: "1.02rem",
-                        background: "#1976d2",
-                        color: "#fff",
-                        boxShadow: "0 2px 8px #2193b044",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          background: "#1565c0",
-                          boxShadow: "0 4px 16px #2193b066",
-                        },
                       }}
                       onClick={() => setSelectedWebinar(w)}
                     >
@@ -199,20 +206,11 @@ export default function WebinarsPage() {
                   ) : canRegister ? (
                     <Button
                       variant="contained"
+                      color="success"
                       sx={{
-                        borderRadius: 3,
                         px: 3,
                         py: 1,
                         fontWeight: 700,
-                        fontSize: "1.02rem",
-                        background: "#4caf50",
-                        color: "#fff",
-                        boxShadow: "0 2px 8px #4caf5044",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          background: "#388e3c",
-                          boxShadow: "0 4px 16px #4caf5066",
-                        },
                       }}
                       onClick={() => handleRegister(w._id)}
                     >
@@ -221,20 +219,11 @@ export default function WebinarsPage() {
                   ) : canUnregister ? (
                     <Button
                       variant="outlined"
+                      color="warning"
                       sx={{
-                        borderRadius: 3,
                         px: 3,
                         py: 1,
                         fontWeight: 700,
-                        fontSize: "1.02rem",
-                        borderColor: "#ff9800",
-                        color: "#ff9800",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          background: "rgba(255,152,0,0.08)",
-                          borderColor: "#f57c00",
-                          color: "#f57c00",
-                        },
                       }}
                       onClick={() => handleUnregister(w._id)}
                     >
@@ -247,12 +236,9 @@ export default function WebinarsPage() {
                         px: 3,
                         py: 1,
                         fontWeight: 700,
-                        fontSize: "1.02rem",
-                        background: "linear-gradient(90deg, #bdbdbd 60%, #e0eafc 100%)",
-                        color: "#666",
-                        boxShadow: "0 2px 8px #2193b022",
+                        bgcolor: "action.disabledBackground",
+                        color: "text.secondary",
                         opacity: 0.8,
-                        letterSpacing: 1,
                         border: "none",
                         cursor: "not-allowed",
                         userSelect: "none",
@@ -293,6 +279,6 @@ export default function WebinarsPage() {
           @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
         `}</style>
       </Card>
-    </Box>
+    </Container>
   );
 }

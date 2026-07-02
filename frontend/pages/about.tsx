@@ -4,17 +4,17 @@ import { BookOpen, BriefcaseMedical, HeartPulse, Users } from "lucide-react";
 
 const highlights = [
   {
-    icon: <BookOpen size={28} color="#2193b0" />,
+    icon: <BookOpen size={28} color="#0072ff" />,
     title: "Case-based learning",
     text: "Explore practical medical cases and sharpen clinical thinking through guided discussions.",
   },
   {
-    icon: <Users size={28} color="#2193b0" />,
+    icon: <Users size={28} color="#0072ff" />,
     title: "Peer collaboration",
     text: "Connect with students, interns, and mentors who are learning and building together.",
   },
   {
-    icon: <BriefcaseMedical size={28} color="#2193b0" />,
+    icon: <BriefcaseMedical size={28} color="#0072ff" />,
     title: "Career support",
     text: "Find webinars, jobs, certificates, and learning opportunities in one focused platform.",
   },
@@ -37,7 +37,7 @@ export default function AboutPage() {
           >
             <Stack direction={{ xs: "column", md: "row" }} spacing={4} alignItems="center">
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h2" fontWeight={900} color="#2193b0" sx={{ fontSize: { xs: "2.4rem", md: "4rem" } }}>
+                <Typography variant="h2" fontWeight={900} color="#0072ff" sx={{ fontSize: { xs: "2.4rem", md: "4rem" } }}>
                   About MedInternia
                 </Typography>
                 <Typography variant="h6" color="text.secondary" sx={{ mt: 2, lineHeight: 1.7 }}>
@@ -53,7 +53,7 @@ export default function AboutPage() {
                     px: 4,
                     py: 1.4,
                     fontWeight: 700,
-                    background: "linear-gradient(90deg, #1de9b6 0%, #2193b0 100%)",
+                    background: "linear-gradient(90deg, #1de9b6 0%, #0072ff 100%)",
                   }}
                 >
                   Contact Us
@@ -64,7 +64,7 @@ export default function AboutPage() {
                   width: { xs: 120, md: 160 },
                   height: { xs: 120, md: 160 },
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg, #6dd5ed 0%, #2193b0 100%)",
+                  background: "linear-gradient(135deg, #6dd5ed 0%, #0072ff 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

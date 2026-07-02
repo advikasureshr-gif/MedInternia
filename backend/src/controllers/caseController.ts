@@ -8,6 +8,7 @@ import {
   buildAICaseSchedule,
   getNextAICasePostDate,
 } from "../services/aiCasePostingService";
+import { analyzeCase } from "../services/aiTaggerService";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
 
@@ -369,29 +370,29 @@ export const createCase = asyncHandler(
     const {
       title,
       description,
-      symptoms,
       patientInfo,
-      diagnosis,
-      treatment,
       images,
-      tags,
-      difficulty,
       specialization,
     } = req.body;
 
+    const spec = specialization || user.specialization || "General Medicine";
+
+    // Run the AI tagger
+    const aiAnalysis = await analyzeCase(title, description, spec);
+
     // Restrict patient case creation
     if (user.userType === "patient") {
-      // Patients can't set diagnosis, treatment, or difficulty
-      // These will be limited or undefined
       const newCase = new Case({
         title,
         description,
-        symptoms: symptoms || [],
+        symptoms: aiAnalysis.symptoms,
         patientInfo: patientInfo || {},
+        diagnosis: aiAnalysis.diagnosis,
+        treatment: aiAnalysis.treatment,
         images: images || [],
-        tags: tags || [],
-        difficulty: "beginner", // Default for patient cases
-        specialization: "General Medicine", // Default for patients
+        tags: aiAnalysis.tags,
+        difficulty: aiAnalysis.difficulty,
+        specialization: aiAnalysis.specialty || spec,
         doctor: user._id as any,
         isPatientCase: true,
         moderationStatus: "pending",
@@ -427,14 +428,14 @@ export const createCase = asyncHandler(
     const newCase = new Case({
       title,
       description,
-      symptoms: symptoms || [],
+      symptoms: aiAnalysis.symptoms,
       patientInfo: patientInfo || {},
-      diagnosis,
-      treatment,
+      diagnosis: aiAnalysis.diagnosis,
+      treatment: aiAnalysis.treatment,
       images: images || [],
-      tags: tags || [],
-      difficulty,
-      specialization: specialization || user.specialization,
+      tags: aiAnalysis.tags,
+      difficulty: aiAnalysis.difficulty,
+      specialization: aiAnalysis.specialty || spec,
       doctor: user._id as any,
       isPatientCase: false,
       moderationStatus: "approved",
@@ -1217,4 +1218,142 @@ export const getCaseAISuggestions = asyncHandler(
       },
     });
   },
+);
+
+// Mark a case as solved
+export const solveCase = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const user = req.user as { _id: string } | undefined;
+
+    if (!user) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const caseData = await Case.findById(id);
+    if (!caseData) {
+      throw new AppError("Case not found", 404);
+    }
+
+    if (!caseData.isActive) {
+      throw new AppError("Case is no longer active", 400);
+    }
+
+    const userDoc = await User.findById(user._id);
+    if (!userDoc) {
+      throw new AppError("User not found", 404);
+    }
+
+    // Check if already solved
+    const solvedList = userDoc.solvedCases || [];
+    const isAlreadySolved = solvedList.some(
+      (caseId) => caseId.toString() === id.toString()
+    );
+
+    if (isAlreadySolved) {
+      return res.json({
+        success: true,
+        message: "Case is already marked as solved",
+        data: {
+          pointsAwarded: 0,
+          casesAnalyzed: userDoc.casesAnalyzed
+        }
+      });
+    }
+
+    // Update user history
+    userDoc.solvedCases = [...solvedList, caseData._id as any];
+    userDoc.casesAnalyzed = (userDoc.casesAnalyzed || 0) + 1;
+    
+    // Award 5 points for solving
+    const pointsAwarded = 5;
+    userDoc.points = (userDoc.points || 0) + pointsAwarded;
+    await userDoc.save();
+
+    res.json({
+      success: true,
+      message: "Case successfully marked as solved!",
+      data: {
+        pointsAwarded,
+        casesAnalyzed: userDoc.casesAnalyzed
+      }
+    });
+  }
+);
+
+// Get personalized case recommendations for a logged-in user
+export const getRecommendedCases = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user as { _id: string } | undefined;
+    if (!user) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const userDoc = await User.findById(user._id).populate("solvedCases");
+    if (!userDoc) {
+      throw new AppError("User not found", 404);
+    }
+
+    const solvedCases = userDoc.solvedCases || [];
+
+    if (solvedCases.length === 0) {
+      return res.json({
+        success: true,
+        message: "Solve a few cases to get personalised recommendations.",
+        data: {
+          cases: []
+        }
+      });
+    }
+
+    // Build frequency map from all solved-case tags
+    const frequencyMap: Record<string, number> = {};
+    for (const solvedCase of solvedCases) {
+      const tags = (solvedCase as any).tags || [];
+      for (const tag of tags) {
+        if (tag) {
+          const normalizedTag = tag.trim().toLowerCase();
+          frequencyMap[normalizedTag] = (frequencyMap[normalizedTag] || 0) + 1;
+        }
+      }
+    }
+
+    const solvedIds = solvedCases.map(c => c._id.toString());
+
+    // Candidates: Unsolved cases, active, approved, not created by user
+    const candidates = await Case.find({
+      _id: { $nin: solvedIds },
+      doctor: { $ne: user._id },
+      isActive: true,
+      moderationStatus: "approved"
+    }).populate("doctor", "firstName lastName specialization");
+
+    // Compute overlap score
+    const scoredCandidates = candidates.map(c => {
+      let score = 0;
+      const tags = c.tags || [];
+      for (const tag of tags) {
+        if (tag) {
+          const normalizedTag = tag.trim().toLowerCase();
+          if (frequencyMap[normalizedTag]) {
+            score += frequencyMap[normalizedTag];
+          }
+        }
+      }
+      return { caseDoc: c, score };
+    });
+
+    // Sort by score descending
+    scoredCandidates.sort((a, b) => b.score - a.score);
+
+    // Limit to top 6 recommendations
+    const recommendedCases = scoredCandidates.slice(0, 6).map(item => item.caseDoc);
+
+    res.json({
+      success: true,
+      data: {
+        cases: recommendedCases
+      }
+    });
+  }
 );

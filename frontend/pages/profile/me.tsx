@@ -85,7 +85,7 @@ export default function MeProfilePage() {
           />
           <Chip
             icon={
-              <span className="material-icons" style={{ color: "#2193b0" }}>
+              <span className="material-icons" style={{ color: "#0072ff" }}>
                 star
               </span>
             }

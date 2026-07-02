@@ -8,10 +8,10 @@ export default function JobCard({ job }: { job: any }) {
         mb: 3,
         borderRadius: 3,
         background: "linear-gradient(120deg, #f8f9fa 0%, #e0eafc 100%)",
-        boxShadow: "0 2px 12px #2193b022",
+        boxShadow: "0 2px 12px #0072ff22",
         transition: "box-shadow 0.2s, transform 0.2s",
         "&:hover": {
-          boxShadow: "0 6px 24px #2193b044",
+          boxShadow: "0 6px 24px #0072ff44",
           transform: "scale(1.02)",
         },
         p: 2,
@@ -24,7 +24,7 @@ export default function JobCard({ job }: { job: any }) {
         <Typography
           variant="h6"
           fontWeight={700}
-          color="#1565c0"
+          color="#0056cc"
           gutterBottom
           component={Link}
           href={`/jobs/${job._id}`}
@@ -44,14 +44,14 @@ export default function JobCard({ job }: { job: any }) {
             borderRadius: 2,
             px: 3,
             fontWeight: 600,
-            background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
+            background: "linear-gradient(90deg, #0072ff 0%, #6dd5ed 100%)",
             color: "#fff",
-            boxShadow: "0 1px 4px #2193b022",
+            boxShadow: "0 1px 4px #0072ff22",
             mt: 1,
             "&:hover": {
-              background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
+              background: "linear-gradient(90deg, #6dd5ed 0%, #0072ff 100%)",
               color: "#fff",
-              boxShadow: "0 2px 8px #2193b044",
+              boxShadow: "0 2px 8px #0072ff44",
             },
           }}
           component={Link}

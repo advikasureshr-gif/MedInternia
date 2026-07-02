@@ -1,12 +1,12 @@
 import { useState } from 'react';
-// GSSoC: Added CircularProgress for loading state
-import { Typography, TextField, Button, Box, Alert, Paper, Divider, IconButton, InputAdornment, CircularProgress } from '@mui/material';
+import { Typography, TextField, Button, Box, Alert, Divider, IconButton, InputAdornment, CircularProgress } from '@mui/material';
 import Link from 'next/link';
 import api from '../../utils/api';
 import { useRouter } from 'next/router';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { getSafeRedirectPath } from '../../utils/authRedirect';
+import AuthLayout, { AuthCard } from '../../components/auth/AuthLayout';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -45,47 +45,17 @@ export default function Login() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', px: { xs: 2, sm: 0 } }}>
-      {/* GSSoC: card-enter adds fade-in-up; mobile width fixed with width/minWidth */}
-      <Paper elevation={8} className="card-enter" sx={{
-        p: { xs: 3, sm: 4 },
-        borderRadius: 4,
-        width: { xs: '100%', sm: 400 },
-        minWidth: { xs: 0, sm: 350 },
-        maxWidth: 420,
-        background: 'rgba(255,255,255,0.98)',
-        boxShadow: '0 8px 32px 0 rgba(33,147,176,0.10)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-       <Box
-  sx={{
-    display: 'flex',
-    justifyContent: 'center',
-    mb: 3,
-  }}
->
-  <Box
-    sx={{
-      width: 90,
-      height: 90,
-
-      borderRadius: '50%',
-      overflow: 'hidden',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      backgroundColor: '#fff',
-      p: 1,
-    }}
-  >
-    <img
-      src="/med-internia-logo.jpg"
-      alt="MedInternia Logo"
-      style={{ width: '100%', height: '100%' }}
-    />
-  </Box>
-</Box>
-  {/* Removed decorative circle at top right */}
-        <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 900, color: '#1565c0', letterSpacing: 1, zIndex: 1, position: 'relative' }}>Login</Typography>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to access medical cases, peer discussions, job opportunities, and your personalized learning dashboard."
+    >
+      <AuthCard>
+        <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>
+          Login
+        </Typography>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
+          Enter your credentials to continue
+        </Typography>
         {error && <Alert severity="error" sx={{ zIndex: 1, position: 'relative' }}>{error}</Alert>}
         <form onSubmit={handleSubmit} style={{ zIndex: 1, position: 'relative' }}>
           <TextField
@@ -96,7 +66,7 @@ export default function Login() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            sx={{ bgcolor: '#f8fafd', borderRadius: 2 }}
+            sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'background.paper' } }}
           />
           <TextField
             label="Password"
@@ -107,8 +77,7 @@ export default function Login() {
             onChange={e => setPassword(e.target.value)}
             required
             sx={{
-              bgcolor: '#f8fafd',
-              borderRadius: 2,
+              '& .MuiOutlinedInput-root': { bgcolor: 'background.paper' },
               '& .MuiInputBase-input': {
                 animation: showPassword
                   ? 'revealPassword 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards'
@@ -163,8 +132,7 @@ export default function Login() {
                       transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
                         transform: 'scale(1.12)',
-                        color: '#1565c0',
-                        filter: 'drop-shadow(0 0 4px rgba(21, 147, 176, 0.4))',
+                        color: 'primary.main',
                       },
                       '&:active': {
                         transform: 'scale(0.93)',
@@ -214,16 +182,9 @@ export default function Login() {
               fontSize: '1.1rem',
               borderRadius: 3,
               letterSpacing: 0.5,
-              background: 'linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)',
-              color: '#ffffff',
-              boxShadow: '0 4px 20px 0 rgba(33, 147, 176, 0.13)',
-              transition: 'all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)',
-              textTransform: 'uppercase',
+              textTransform: 'none',
               '&:hover': {
-                background: 'linear-gradient(90deg, #1565c0 0%, #2193b0 100%)',
-                transform: 'scale(1.03)',
-                boxShadow: '0 8px 32px 0 rgba(33, 147, 176, 0.18)',
-                color: '#ffffff'
+                transform: 'translateY(-1px)',
               },
               '&:active': {
                 color: '#ffffff',
@@ -242,30 +203,24 @@ export default function Login() {
           <Button
             component={Link}
             href="/auth/register"
-            variant="outlined"
+            variant="text"
             color="primary"
             fullWidth
             sx={{
               borderRadius: 3,
               fontWeight: 700,
               py: 1.3,
-              border: '2px solid #2193b0',
-              color: '#2193b0',
               textDecoration: 'none !important',
-              transition: 'all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)',
               '&:hover': {
-                border: '2px solid #1565c0',
-                background: 'rgba(33, 147, 176, 0.05)',
-                color: '#1565c0',
-                transform: 'scale(1.02)',
+                bgcolor: 'rgba(0, 114, 255, 0.06)',
                 textDecoration: 'none !important',
               },
             }}
           >
-            Register
+            Create an account
           </Button>
         </Box>
-      </Paper>
-    </Box>
+      </AuthCard>
+    </AuthLayout>
   );
 }

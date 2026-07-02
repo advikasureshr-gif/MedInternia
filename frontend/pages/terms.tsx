@@ -17,31 +17,31 @@ import {
 const sections = [
   {
     title: "Acceptable Use",
-    icon: <UserCheck size={22} color="#2193b0" />,
+    icon: <UserCheck size={22} color="#0072ff" />,
     description:
       "Use MedInternia respectfully and only for learning, collaboration, networking, and professional development. Users are expected to maintain professionalism while interacting with others.",
   },
   {
     title: "Prohibited Activities",
-    icon: <Ban size={22} color="#2193b0" />,
+    icon: <Ban size={22} color="#0072ff" />,
     description:
       "Do not upload harmful, misleading, offensive, illegal, or unauthorized content. Any misuse of the platform may result in account suspension or permanent removal.",
   },
   {
     title: "Community Guidelines",
-    icon: <ShieldCheck size={22} color="#2193b0" />,
+    icon: <ShieldCheck size={22} color="#0072ff" />,
     description:
       "Respect fellow learners, mentors, healthcare professionals, and contributors. Harassment, discrimination, or abusive behavior is not tolerated.",
   },
   {
     title: "Medical Disclaimer",
-    icon: <Stethoscope size={22} color="#2193b0" />,
+    icon: <Stethoscope size={22} color="#0072ff" />,
     description:
       "Content available on MedInternia is intended for educational purposes only and should never replace professional medical advice, diagnosis, or treatment.",
   },
   {
     title: "Updates to These Terms",
-    icon: <RefreshCcw size={22} color="#2193b0" />,
+    icon: <RefreshCcw size={22} color="#0072ff" />,
     description:
       "These Terms of Service may be updated periodically to reflect improvements, legal requirements, or platform changes. Continued use of the platform constitutes acceptance of the revised terms.",
   },
@@ -74,12 +74,12 @@ export default function TermsPage() {
             alignItems="center"
             sx={{ mb: 2 }}
           >
-            <ClipboardCheck size={44} color="#2193b0" />
+            <ClipboardCheck size={44} color="#0072ff" />
 
             <Typography
               variant="h2"
               fontWeight={900}
-              color="#2193b0"
+              color="#0072ff"
               sx={{
                 fontSize: {
                   xs: "2.2rem",

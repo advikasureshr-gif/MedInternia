@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Box,
+  Container,
   Typography,
   Card,
   List,
@@ -15,6 +16,9 @@ import { useRouter } from "next/router";
 import api from "../utils/api";
 import { hasAuthToken, redirectToLogin } from "../utils/authRedirect";
 import { getCurrentUserRole } from "../utils/permissions";
+import PageHeader from "../components/layout/PageHeader";
+import EmptyState from "../components/layout/EmptyState";
+import { Briefcase } from "lucide-react";
 
 export default function Jobs() {
   const router = useRouter();
@@ -58,62 +62,46 @@ export default function Jobs() {
 
   if (loading)
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
-        <CircularProgress />
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+        <CircularProgress aria-label="Loading job opportunities" />
       </Box>
     );
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error">{error}</Alert>
+      </Container>
+    );
+  }
 
   return (
-    <Box
-      maxWidth={700}
-      mx="auto"
-      my={4}
-      sx={{
-        minHeight: "80vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 }, minHeight: "80vh" }}>
+      <PageHeader
+        title="Job Opportunities"
+        subtitle="Discover internships, residencies, and medical jobs tailored for doctors and interns."
+        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Jobs" }]}
+      />
       {isPatient ? (
-        <Alert severity="info" sx={{ mb: 3, textAlign: "center" }}>
+        <Alert severity="info" sx={{ mb: 3 }}>
           Job opportunities are currently available for doctors and interns.
         </Alert>
       ) : null}
       <Card
         sx={{
-          p: 4,
-          borderRadius: 4,
-          boxShadow: "0 2px 12px #2193b022",
-          background: "linear-gradient(120deg, #f8f9fa 0%, #e0eafc 100%)",
+          p: { xs: 2, sm: 3 },
           width: "100%",
         }}
       >
-        <Typography
-          variant="h3"
-          fontWeight={900}
-          mb={2}
-          color="#1565c0"
-          sx={{ letterSpacing: 1, textAlign: "center" }}
-        >
-          Job Opportunities
-        </Typography>
-        <Typography
-          variant="subtitle1"
-          color="text.secondary"
-          mb={3}
-          sx={{ fontSize: "1.12rem", fontWeight: 500, textAlign: "center" }}
-        >
-          Discover internships, residencies, and medical jobs tailored for you.
-        </Typography>
-
         {isPatient ? (
           <Typography textAlign="center" color="text.secondary">
             Patients do not see job opportunities on this platform.
           </Typography>
         ) : jobs.length === 0 ? (
-          <Typography textAlign="center">No jobs found.</Typography>
+          <EmptyState
+            icon={Briefcase}
+            title="No jobs found"
+            description="Open internships, residencies, and medical roles will appear here once they are posted."
+          />
         ) : (
           <List>
             {jobs.map((j, i) => (
@@ -121,29 +109,26 @@ export default function Jobs() {
                 key={j._id}
                 sx={{
                   animation: `slideUp 0.6s ${i * 0.1}s both`,
-                  borderRadius: 3,
+                  borderRadius: 2,
                   mb: 2,
-                  boxShadow: "0 1px 4px #2193b022",
-                  background: "#fff",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  background: "background.paper",
+                  transition: "box-shadow 0.2s ease, transform 0.2s ease",
+                  "&:hover": {
+                    boxShadow: (theme) => theme.custom.cardShadowHover,
+                    transform: "translateY(-2px)",
+                  },
                 }}
                 secondaryAction={
                   j.status === "Open" ? (
                     <Button
                       variant="contained"
+                      color="success"
                       sx={{
-                        borderRadius: 3,
                         px: 3,
                         py: 1,
                         fontWeight: 700,
-                        fontSize: "1.02rem",
-                        background: "#43a047",
-                        color: "#fff",
-                        boxShadow: "0 2px 8px #2193b044",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          background: "#1565c0",
-                          boxShadow: "0 4px 16px #2193b066",
-                        },
                       }}
                     >
                       Apply
@@ -152,20 +137,15 @@ export default function Jobs() {
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Box
                         sx={{
-                          borderRadius: 3,
-                          px: 3,
-                          py: 1,
-                          fontWeight: 700,
-                          fontSize: "1.02rem",
-                          background:
-                            "linear-gradient(90deg, #bdbdbd 60%, #e0eafc 100%)",
-                          color: "#666",
-                          boxShadow: "0 2px 8px #2193b022",
-                          opacity: 0.8,
-                          letterSpacing: 1,
-                          border: "none",
-                          cursor: "not-allowed",
-                          userSelect: "none",
+                        borderRadius: 3,
+                        px: 3,
+                        py: 1,
+                        fontWeight: 700,
+                        bgcolor: "action.disabledBackground",
+                        color: "text.secondary",
+                        border: "none",
+                        cursor: "not-allowed",
+                        userSelect: "none",
                         }}
                       >
                         Closed
@@ -207,6 +187,6 @@ export default function Jobs() {
           }
         `}</style>
       </Card>
-    </Box>
+    </Container>
   );
 }

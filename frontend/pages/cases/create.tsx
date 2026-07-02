@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Stethoscope, Rocket, Sparkles, Image as ImageIcon, Loader2 } from "lucide-react";
 import {
   Container,
   Typography,
@@ -9,33 +10,73 @@ import {
   MenuItem,
   Card,
   CardContent,
-  Stack,
-  Grid,
-  CardMedia,
   IconButton,
+  CardMedia,
+  Backdrop,
+  CircularProgress,
+  Stack,
+  Grid
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import api from "../../utils/api";
 import { useRouter } from "next/router";
+import PageHeader from "../../components/layout/PageHeader";
+
+const SPECIALTIES = [
+  "General Medicine",
+  "Cardiology",
+  "Neurology",
+  "Pulmonology",
+  "Gastroenterology",
+  "Urology",
+  "Endocrinology",
+  "Infectious Disease",
+  "Pediatrics",
+  "Dermatology",
+  "Oncology"
+];
+
+const LOADING_STEPS = [
+  "Analysing case text...",
+  "Extracting clinical symptoms...",
+  "Detecting medical entities (NER)...",
+  "Classifying diagnostic complexity...",
+  "Generating treatment insights...",
+  "Applying AI tags and saving..."
+];
 
 export default function CreateCase() {
   const [form, setForm] = useState({
     title: "",
     description: "",
-    difficulty: "beginner",
-    Category: "",
+    specialization: "",
   });
 
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+
   const router = useRouter();
+
+  // Cycle through loading steps to show the AI tagger progress
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (loading) {
+      interval = setInterval(() => {
+        setLoadingStepIndex((prev) => (prev + 1) % LOADING_STEPS.length);
+      }, 1800);
+    } else {
+      setLoadingStepIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Convert images to Base64 and store in array
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
@@ -49,12 +90,11 @@ export default function CreateCase() {
           })
       );
       Promise.all(promises).then((base64Files) => {
-        setImages((prev) => [...prev, ...base64Files]); // append new images
+        setImages((prev) => [...prev, ...base64Files]);
       });
     }
   };
 
-  // Remove an image by index
   const handleRemoveImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
@@ -63,222 +103,299 @@ export default function CreateCase() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setLoading(true);
 
     try {
       const token = localStorage.getItem("token");
 
       const payload = {
         ...form,
-        images, // array of base64 images
+        images,
       };
 
-      await api.post("/cases", payload, {
+      const res = await api.post("/cases", payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
 
-      setSuccess("Case created successfully!");
-      setForm({
-        title: "",
-        description: "",
-        difficulty: "beginner",
-        Category: "",
-      });
-      setImages([]);
+      setSuccess("Case analyzed and created successfully!");
+      
+      // Delay slightly for visual transition
+      setTimeout(() => {
+        setLoading(false);
+        const newCaseId = res.data.data.case._id;
+        router.push(`/cases/${newCaseId}`);
+      }, 1000);
+
     } catch (err: any) {
+      setLoading(false);
       setError(err?.response?.data?.message || "Failed to create case.");
     }
   };
 
-  // ✅ Return JSX here, not inside handleSubmit
   return (
     <Box
       sx={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)",
+        minHeight: "calc(100vh - 64px)",
+        background: "linear-gradient(135deg, #f8fbff 0%, #e8f4ff 100%)",
+        py: 6,
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
       }}
     >
-      <Card
-        elevation={8}
-        sx={{
-          p: 4,
-          borderRadius: 4,
-          minWidth: 350,
-          maxWidth: 500,
-          width: "100%",
-          background: "rgba(255,255,255,0.98)",
-          boxShadow: "0 8px 32px 0 rgba(33,147,176,0.10)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <Typography
-          variant="h4"
-          gutterBottom
-          align="center"
+      <Container maxWidth="md">
+        <PageHeader
+          title="Submit Medical Case"
+          subtitle="Contribute clinical scenarios to the platform. Our Clinical AI will automatically extract symptoms, difficulty levels, and key topics from your text."
+          breadcrumbs={[{ label: "Home", href: "/" }, { label: "Cases", href: "/cases" }, { label: "Create" }]}
+        />
+
+        <Card
+          elevation={4}
           sx={{
-            fontWeight: 900,
-            color: "#1565c0",
-            letterSpacing: 1,
-            zIndex: 1,
-            position: "relative",
+            mt: 3,
+            p: { xs: 3, md: 4 },
+            borderRadius: 4,
+            background: "rgba(255, 255, 255, 0.95)",
+            border: "1px solid",
+            borderColor: "divider",
           }}
         >
-          <span
-            style={{
-              color: "#2193b0",
-              marginRight: 8,
-              fontSize: 36,
-              verticalAlign: "middle",
-            }}
-          >
-            🩺
-          </span>
-          Create Medical Case
-        </Typography>
+          {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
+          {success && <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>{success}</Alert>}
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-
-        <form onSubmit={handleSubmit} style={{ zIndex: 1, position: "relative" }}>
-          <TextField
-            label="Title"
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            required
-            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
-          />
-          <TextField
-            label="Description"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            required
-            multiline
-            minRows={4}
-            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
-          />
-          <TextField
-            label="Category"
-            name="Category"
-            value={form.Category}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            required
-            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
-          />
-          <TextField
-            label="Difficulty"
-            name="difficulty"
-            value={form.difficulty}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            required
-            select
-            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
-          >
-            <MenuItem value="beginner">Beginner</MenuItem>
-            <MenuItem value="intermediate">Intermediate</MenuItem>
-            <MenuItem value="complex">Complex</MenuItem>
-          </TextField>
-
-          <Button
-            variant="outlined"
-            component="label"
-            fullWidth
-            sx={{
-              mt: 2,
-              mb: 2,
-              fontWeight: 700,
-              color: "#2193b0",
-              borderColor: "#2193b0",
-              borderRadius: 2,
-              background: "#f8fafd",
-              "&:hover": { background: "#e3f2fd" },
-            }}
-          >
-            UPLOAD CASE IMAGE(S)
-            <input
-              type="file"
-              hidden
-              multiple
-              accept="image/"
-              onChange={handleImageChange}
-            />
-          </Button>
-
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
-            {images.map((img, idx) => (
-              <Card
-                key={idx}
-                sx={{
-                  width: 90,
-                  height: 90,
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  boxShadow: 1,
-                  position: "relative",
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  image={img}
-                  alt={`Case image ${idx + 1}`}
-                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+          <form onSubmit={handleSubmit}>
+            <Grid container spacing={3}>
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: "text.primary" }}>
+                  Case Title
+                </Typography>
+                <TextField
+                  placeholder="e.g., 45-year-old male with sudden onset chest pain and sweating"
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  InputProps={{ sx: { borderRadius: '10px', bgcolor: '#fdfdff' } }}
                 />
-                <IconButton
-                  size="small"
-                  sx={{
-                    position: "absolute",
-                    top: 2,
-                    right: 2,
-                    bgcolor: "rgba(255,255,255,0.7)",
-                  }}
-                  onClick={() => handleRemoveImage(idx)}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Card>
-            ))}
-          </Box>
+              </Grid>
 
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: "text.primary" }}>
+                  Specialty area
+                </Typography>
+                <TextField
+                  select
+                  name="specialization"
+                  value={form.specialization}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  label="Select specialization"
+                  InputProps={{ sx: { borderRadius: '10px', bgcolor: '#fdfdff' } }}
+                >
+                  {SPECIALTIES.map((spec) => (
+                    <MenuItem key={spec} value={spec}>
+                      {spec}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: "text.primary" }}>
+                  Clinical Case Description
+                </Typography>
+                <TextField
+                  placeholder="Write a detailed description of the case. Include presentation, clinical observations, lab reports, diagnostics, or questions for peer review. Do not include identifiable patient details."
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  multiline
+                  minRows={8}
+                  maxRows={20}
+                  InputProps={{ sx: { borderRadius: '10px', bgcolor: '#fdfdff' } }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: "text.primary" }}>
+                  Supporting Materials (Images)
+                </Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  fullWidth
+                  startIcon={<ImageIcon size={20} />}
+                  sx={{
+                    py: 2,
+                    borderStyle: "dashed",
+                    borderWidth: "2px",
+                    borderColor: "primary.main",
+                    bgcolor: "primary.light",
+                    color: "primary.dark",
+                    borderRadius: 3,
+                    "&:hover": {
+                      bgcolor: "#e0f2fe",
+                      borderColor: "primary.dark",
+                    },
+                    transition: "all 0.2s",
+                  }}
+                >
+                  Upload clinical images, ECGs, or reports
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                </Button>
+              </Grid>
+
+              {images.length > 0 && (
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                    {images.map((img, idx) => (
+                      <Card
+                        key={idx}
+                        sx={{
+                          width: 100,
+                          height: 100,
+                          borderRadius: 2,
+                          overflow: "hidden",
+                          position: "relative",
+                          border: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <CardMedia
+                          component="img"
+                          image={img}
+                          alt={`Uploaded thumbnail ${idx + 1}`}
+                          sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        <IconButton
+                          size="small"
+                          sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            bgcolor: "rgba(0,0,0,0.5)",
+                            color: "white",
+                            "&:hover": { bgcolor: "rgba(0,0,0,0.7)" },
+                          }}
+                          onClick={() => handleRemoveImage(idx)}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Card>
+                    ))}
+                  </Box>
+                </Grid>
+              )}
+
+              <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  fullWidth
+                  startIcon={<Rocket size={20} />}
+                  sx={{
+                    py: 1.8,
+                    fontWeight: 800,
+                    fontSize: "1.1rem",
+                    borderRadius: 3,
+                    background: "linear-gradient(90deg, #0072ff 0%, #00c6ff 100%)",
+                    boxShadow: "0 4px 18px rgba(0, 114, 255, 0.35)",
+                    "&:hover": {
+                      background: "linear-gradient(90deg, #0056cc 0%, #0072ff 100%)",
+                      boxShadow: "0 6px 24px rgba(0, 114, 255, 0.5)",
+                      transform: "translateY(-1px)",
+                    },
+                    transition: "all 0.2s",
+                  }}
+                >
+                  Submit & Analyze Case
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+        </Card>
+      </Container>
+
+      {/* AI Tagger loading state overlay */}
+      <Backdrop
+        open={loading}
+        sx={{
+          zIndex: (theme) => theme.zIndex.drawer + 999,
+          color: "#fff",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+          background: "rgba(15, 23, 42, 0.95)",
+        }}
+      >
+        <Box sx={{ position: "relative", display: "inline-flex" }}>
+          <CircularProgress
+            size={100}
+            thickness={2.5}
             sx={{
-              mt: 2,
-              py: 1.3,
-              fontWeight: 700,
-              fontSize: "1.1rem",
-              borderRadius: 3,
-              boxShadow: "0 4px 20px 0 rgba(31, 38, 135, 0.10)",
-              background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
-              textTransform: "none",
-              letterSpacing: 1,
-              "&:hover": {
-                background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
-              },
+              color: "#00c6ff",
+            }}
+          />
+          <Box
+            sx={{
+              top: 0,
+              left: 0,
+              bottom: 0,
+              right: 0,
+              position: "absolute",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#0072ff",
+              animation: "pulse 2s infinite",
             }}
           >
-            🚀 CREATE CASE
-          </Button>
-        </form>
-      </Card>
+            <Sparkles size={40} />
+          </Box>
+        </Box>
+
+        <Stack alignItems="center" spacing={1}>
+          <Typography variant="h5" fontWeight={800} letterSpacing={0.5} sx={{ color: "white" }}>
+            Analysing Case...
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "#94a3b8",
+              fontStyle: "italic",
+              animation: "fadeInOut 1.8s infinite",
+              minHeight: "24px"
+            }}
+          >
+            {LOADING_STEPS[loadingStepIndex]}
+          </Typography>
+        </Stack>
+
+        <style jsx global>{`
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 1; }
+          }
+          @keyframes fadeInOut {
+            0%, 100% { opacity: 0.3; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1.02); }
+          }
+        `}</style>
+      </Backdrop>
     </Box>
   );
 }
-

@@ -4,9 +4,9 @@ import Link from "next/link";
 export default function WebinarCard({ webinar }: { webinar: any }) {
   // Status pill styling
   const status = webinar.status || "Upcoming";
-  const statusColor = status === "Upcoming" ? "#2193b0" : "#bdbdbd";
+  const statusColor = status === "Upcoming" ? "#0072ff" : "#bdbdbd";
   return (
-    <Card sx={{ mb: 3, borderRadius: 3, boxShadow: "0 2px 12px #2193b022" }}>
+    <Card sx={{ mb: 3, borderRadius: 3, boxShadow: "0 2px 12px #0072ff22" }}>
       <CardContent sx={{ p: 2 }}>
         <Box
           sx={{
@@ -22,7 +22,7 @@ export default function WebinarCard({ webinar }: { webinar: any }) {
             <Typography
               variant="h6"
               fontWeight={700}
-              sx={{ color: "#1565c0", mb: 0.5, wordBreak: "break-word" }}
+              sx={{ color: "#0056cc", mb: 0.5, wordBreak: "break-word" }}
               component={Link}
               href={`/webinars/${webinar._id}`}
             >
@@ -72,9 +72,9 @@ export default function WebinarCard({ webinar }: { webinar: any }) {
                 px: 2.5,
                 py: 0.5,
                 textTransform: "none",
-                borderColor: "#2193b0",
-                color: "#2193b0",
-                "&:hover": { borderColor: "#1565c0", color: "#1565c0" },
+                borderColor: "#0072ff",
+                color: "#0072ff",
+                "&:hover": { borderColor: "#0056cc", color: "#0056cc" },
               }}
               component={Link}
               href={`/webinars/${webinar._id}`}

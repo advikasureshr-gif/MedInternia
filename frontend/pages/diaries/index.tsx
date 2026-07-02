@@ -286,7 +286,7 @@ const DiariesPage: React.FC = () => {
                         </button>
                     </div>
                     <h1 className="med-heading" style={{ fontSize: 32, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <FaBookOpen className="med-accent" style={{ color: '#2193b0' }} /> Daily Diaries
+                        <FaBookOpen className="med-accent" style={{ color: '#0072ff' }} /> Daily Diaries
                     </h1>
                     {/* Create Diary Popup */}
                     {showCreateDiary && (

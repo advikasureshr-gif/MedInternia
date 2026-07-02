@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { verifyToken, JwtPayload } from '../utils/jwt';
 import User, { IUser } from '../models/User';
 import { getUserRole } from './permissions';
@@ -61,6 +61,34 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       success: false,
       message: 'Internal server error'
     });
+  }
+};
+
+export const optionalAuthenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    try {
+      const decoded = verifyToken(token);
+
+      if (decoded) {
+        const user = await User.findById(decoded.userId).select('-password');
+        if (user && user.isActive) {
+          req.user = user;
+        }
+      }
+    } catch (tokenError) {
+      // Silently fall through for optional auth
+    }
+    next();
+  } catch (error) {
+    next();
   }
 };
 

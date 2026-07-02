@@ -33,7 +33,7 @@ export default function FAQPage() {
             boxShadow: "0 12px 36px rgba(33,147,176,0.14)",
           }}
         >
-          <Typography variant="h2" fontWeight={900} color="#2193b0" sx={{ fontSize: { xs: "2.3rem", md: "3.5rem" }, mb: 2 }}>
+          <Typography variant="h2" fontWeight={900} color="#0072ff" sx={{ fontSize: { xs: "2.3rem", md: "3.5rem" }, mb: 2 }}>
             FAQs
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 4, lineHeight: 1.7 }}>
@@ -42,7 +42,7 @@ export default function FAQPage() {
 
           {faqs.map((faq) => (
             <Accordion key={faq.question} disableGutters elevation={0} sx={{ borderBottom: "1px solid #e2e8f0", "&:before": { display: "none" } }}>
-              <AccordionSummary expandIcon={<ChevronDown size={20} color="#2193b0" />}>
+              <AccordionSummary expandIcon={<ChevronDown size={20} color="#0072ff" />}>
                 <Typography fontWeight={800}>{faq.question}</Typography>
               </AccordionSummary>
               <AccordionDetails>

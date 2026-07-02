@@ -1,13 +1,14 @@
 import { useState } from "react";
+import { MessageCircle } from "lucide-react";
 import ChatMessage from "./ChatMessage";
 const DiscussionChat = () => {
   const [messages, setMessages] = useState<{ user: string; text: string }[]>([
     {
-      user: "Dr. Sharma",
+      user: "Contributor",
       text: "Possible bacterial pneumonia based on symptoms.",
     },
     {
-      user: "Dr. Lee",
+      user: "Clinical Reviewer",
       text: "Recommend immediate chest X-ray and CBC test.",
     },
   ]);
@@ -80,7 +81,8 @@ const DiscussionChat = () => {
           color: "#111827",
         }}
       >
-        💬 Discussion Chat
+        <MessageCircle size={20} aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
+        Discussion Chat
       </h2>
 
       <div
@@ -99,7 +101,7 @@ const DiscussionChat = () => {
         ))}
         {loading && (
           <div style={{ color: "#6b7280", fontSize: "13px", padding: "8px 0" }}>
-            🤖 AI Assistant is typing...
+            AI Assistant is typing...
           </div>
         )}
       </div>

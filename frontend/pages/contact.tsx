@@ -70,7 +70,7 @@ export default function ContactPage() {
               <Typography
                 variant="h2"
                 fontWeight={900}
-                color="#2193b0"
+                color="#0072ff"
                 sx={{
                   fontSize: { xs: "2.2rem", sm: "3rem", md: "4.5rem" },
                   lineHeight: 1.05,
@@ -107,13 +107,13 @@ export default function ContactPage() {
                   px: 4,
                   py: 1.4,
                   fontWeight: 700,
-                  background: "linear-gradient(90deg, #1de9b6 0%, #2193b0 100%)",
+                  background: "linear-gradient(90deg, #1de9b6 0%, #0072ff 100%)",
                   color: "#ffffff",
                   boxShadow: "0 4px 14px 0 rgba(33,147,176,0.18)",
                   borderBottom: "none !important",
                   transition: "all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)",
                   "&:hover": {
-                    background: "linear-gradient(90deg, #2193b0 0%, #1de9b6 100%)",
+                    background: "linear-gradient(90deg, #0072ff 0%, #1de9b6 100%)",
                     transform: "scale(1.04)",
                     boxShadow: "0 6px 20px 0 rgba(33,147,176,0.28)",
                     color: "#ffffff",
@@ -143,7 +143,7 @@ export default function ContactPage() {
               <Stack spacing={3}>
                 {/* GSSoC: Lucide Hospital icon replaces MUI LocalHospitalIcon */}
                 <Box>
-                  <Hospital size={42} color="#2193b0" style={{ marginBottom: 8 }} />
+                  <Hospital size={42} color="#0072ff" style={{ marginBottom: 8 }} />
                   <Typography variant="h4" fontWeight="bold">
                     We are here to help
                   </Typography>
@@ -168,7 +168,7 @@ export default function ContactPage() {
                     width: "100%",
                   }}
                 >
-                  <Mail size={22} color="#2193b0" aria-hidden="true" />
+                  <Mail size={22} color="#0072ff" aria-hidden="true" />
                   <Typography
                     component="a"
                     href="mailto:medinternia@gmail.com"
@@ -200,7 +200,7 @@ export default function ContactPage() {
                     width: "100%",
                   }}
                 >
-                  <Phone size={22} color="#2193b0" aria-hidden="true" />
+                  <Phone size={22} color="#0072ff" aria-hidden="true" />
                   <Typography
                     component="a"
                     href="tel:8585858585"
