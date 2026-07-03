@@ -31,6 +31,7 @@ import ProfileDropdown from "./ProfileDropdown";
 import NotificationBell from "./NotificationBell";
 import SearchIcon from "@mui/icons-material/Search";
 import ArticleIcon from "@mui/icons-material/Article";
+import HelpIcon from "@mui/icons-material/Help";
 import CloseIcon from "@mui/icons-material/Close";
 
 import { getCurrentUserRole } from "../utils/permissions";
@@ -493,6 +494,12 @@ export default function Navbar({ route }: { route?: string }) {
                 label="Research Paper"
                 isActive={router.pathname === "/research_paper"}
               />
+              <NavButton
+                href="/faq"
+                icon={<HelpIcon />}
+                label="FAQ"
+                isActive={router.pathname === "/faq"}
+              />
               <NotificationBell />
             </Box>
           )}
@@ -567,6 +574,12 @@ export default function Navbar({ route }: { route?: string }) {
               icon={<ArticleIcon />}
               label="Research Paper"
               isActive={router.pathname === "/research_paper"}
+            />
+            <NavButton
+              href="/faq"
+              icon={<HelpIcon />}
+              label="FAQ"
+              isActive={router.pathname === "/faq"}
             />
           </List>
         </Box>
