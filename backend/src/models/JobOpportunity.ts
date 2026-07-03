@@ -30,6 +30,10 @@ export interface IJobOpportunity extends Document {
   postedBy: mongoose.Types.ObjectId;
   isActive: boolean;
   applications: number;
+  applicants: {
+    user: mongoose.Types.ObjectId;
+    appliedAt: Date;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -141,8 +145,19 @@ const JobOpportunitySchema = new Schema({
     type: Number,
     default: 0,
     min: [0, 'Applications count cannot be negative']
-  }
-}, {
+  },
+  applicants: [{
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    appliedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
+},{
   timestamps: true
 });
 

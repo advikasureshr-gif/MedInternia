@@ -1,5 +1,6 @@
-import { Card, CardContent, Typography, Button } from "@mui/material";
+import { Card, CardContent, Typography, Button, Box } from "@mui/material";
 import Link from "next/link";
+import DeadlineCountdown from "./DeadlineCountdown";
 
 export default function JobCard({ job }: { job: any }) {
   return (
@@ -38,6 +39,9 @@ export default function JobCard({ job }: { job: any }) {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           {job.description}
         </Typography>
+        <Box sx={{ mb: 1.5 }}>
+          <DeadlineCountdown deadline={job.applicationDeadline} />
+        </Box>
         <Button
           variant="contained"
           sx={{
@@ -63,3 +67,4 @@ export default function JobCard({ job }: { job: any }) {
     </Card>
   );
 }
+

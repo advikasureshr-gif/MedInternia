@@ -1,7 +1,10 @@
+import mongoose from "mongoose";
 import { createAndEmitNotification } from "./notificationController";
 import { Response } from "express";
 import Case, { ICase } from "../models/Case";
 import User from "../models/User";
+import Rating from "../models/Rating";
+import Notification from "../models/Notification";
 import AICasePostSchedule from "../models/AICasePostSchedule";
 import { AuthRequest } from "../middleware/auth";
 import {
@@ -204,7 +207,6 @@ export const replyToComment = asyncHandler(
       throw new AppError("Duplicate reply detected", 409);
     }
     // Create reply as a plain object with manual _id assignment
-    const mongoose = require("mongoose");
     const reply = {
       author: user._id,
       content: content.trim(),
@@ -217,12 +219,11 @@ export const replyToComment = asyncHandler(
       _id: new mongoose.Types.ObjectId(),
     };
     caseDoc.comments.push(reply as any);
-    parentComment.replies.push(reply._id);
+    parentComment.replies.push(reply._id as any);
     await caseDoc.save();
 
     // Send notification to comment author if not replying to own comment
     if (parentComment.author.toString() !== user._id.toString()) {
-      const Notification = require("../models/Notification").default;
       await Notification.create({
         recipient: parentComment.author,
         message: `Someone replied to your comment: "${parentComment.content}"`,
@@ -244,45 +245,40 @@ export const replyToComment = asyncHandler(
 // Like a comment
 export const likeComment = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const user = req.user as { _id: string | { toString(): string } };
+    const user = req.user as { _id: string };
     const { caseId, commentId } = req.params;
     if (!user) {
       throw new AppError("User not authenticated", 401);
     }
-    const caseDoc = await Case.findById(caseId);
-    if (!caseDoc) {
-      throw new AppError("Case not found", 404);
-    }
-    const comment = caseDoc.comments.find(
-      (c: any) => c._id?.toString() === commentId,
-    );
-    if (!comment) {
-      throw new AppError("Comment not found", 404);
-    }
-    // Toggle like
-    const mongoose = require("mongoose");
-    const userIdObj =
-      typeof user._id === "string"
-        ? new mongoose.Types.ObjectId(user._id)
-        : user._id;
-    const likeIndex = comment.likes.findIndex(
-      (uid: any) => uid.toString() === userIdObj.toString(),
-    );
+
+    const userIdObj = new mongoose.Types.ObjectId(user._id);
+
+    // Atomically toggle: try pull first (unlike)
     let liked = false;
-    if (likeIndex > -1) {
-      // Unlike
-      comment.likes.splice(likeIndex, 1);
-      liked = false;
-    } else {
-      // Like
-      comment.likes.push(userIdObj);
+    const pullResult = await Case.updateOne(
+      { _id: caseId, "comments._id": commentId },
+      { $pull: { "comments.$.likes": userIdObj } },
+    );
+
+    if (pullResult.modifiedCount === 0) {
+      // Not already liked, so add the like
+      await Case.updateOne(
+        { _id: caseId, "comments._id": commentId },
+        { $addToSet: { "comments.$.likes": userIdObj } },
+      );
       liked = true;
     }
-    await caseDoc.save();
+
+    // Fetch updated like count
+    const updatedCase = await Case.findById(caseId, {
+      comments: { $elemMatch: { _id: commentId } },
+    });
+    const likes = ((updatedCase?.comments as any)?.[0]?.likes as any[])?.length ?? 0;
+
     res.json({
       success: true,
       message: liked ? "Comment liked" : "Comment unliked",
-      data: { likes: comment.likes.length, liked },
+      data: { likes, liked },
     });
   },
 );
@@ -290,7 +286,7 @@ export const likeComment = asyncHandler(
 // Rate a comment
 export const rateComment = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const user = req.user as { _id: string | { toString(): string } };
+    const user = req.user as { _id: string };
     const { caseId, commentId } = req.params;
     const { rating } = req.body;
     if (!user) {
@@ -299,53 +295,82 @@ export const rateComment = asyncHandler(
     if (!rating || rating < 1 || rating > 5) {
       throw new AppError("Rating must be between 1 and 5", 400);
     }
-    const caseDoc = await Case.findById(caseId);
+
+    // Verify case and comment exist
+    const caseDoc = await Case.findById(caseId, {
+      comments: { $elemMatch: { _id: commentId } },
+    });
     if (!caseDoc) {
       throw new AppError("Case not found", 404);
     }
-    const comment = caseDoc.comments.find(
-      (c: any) => c._id?.toString() === commentId,
-    );
-    if (!comment) {
+    if (!(caseDoc.comments as any)?.[0]) {
       throw new AppError("Comment not found", 404);
     }
-    // Toggle rating
-    const mongoose = require("mongoose");
-    const userIdObj =
-      typeof user._id === "string"
-        ? new mongoose.Types.ObjectId(user._id)
-        : user._id;
-    const rateIndex = comment.ratedBy.findIndex(
-      (uid: any) => uid.toString() === userIdObj.toString(),
-    );
+
+    const userIdObj = new mongoose.Types.ObjectId(user._id);
+    const commentIdObj = new mongoose.Types.ObjectId(commentId);
+
+    // Use Rating model (unique compound index on {rater, commentId}) as source of truth
+    const existingRating = await Rating.findOne({
+      rater: userIdObj,
+      commentId: commentIdObj,
+    });
+
     let rated = false;
-    if (rateIndex > -1) {
-      // Unrate
-      comment.ratedBy.splice(rateIndex, 1);
-      // Recalculate average rating
-      if (comment.ratedBy.length === 0) comment.rating = undefined;
-      else
-        comment.rating = Math.round(
-          ((comment.rating ?? 0) * comment.ratedBy.length) /
-            (comment.ratedBy.length + 1),
-        );
+    if (existingRating) {
+      // Unrate: remove the Rating document and denormalized reference
+      await Rating.deleteOne({ _id: existingRating._id });
+      await Case.updateOne(
+        { _id: caseId, "comments._id": commentId },
+        { $pull: { "comments.$.ratedBy": userIdObj } },
+      );
       rated = false;
     } else {
-      // Rate
-      comment.ratedBy.push(userIdObj);
-      if (!comment.rating) comment.rating = rating;
-      else
-        comment.rating = Math.round(
-          (comment.rating * (comment.ratedBy.length - 1) + rating) /
-            comment.ratedBy.length,
-        );
+      // Rate: upsert with unique index guard against duplicates
+      try {
+        await Rating.create({
+          rater: userIdObj,
+          commentId: commentIdObj,
+          caseId: new mongoose.Types.ObjectId(caseId),
+          rating,
+        });
+      } catch (err: any) {
+        if (err.code === 11000) {
+          throw new AppError("Already rated this comment", 409);
+        }
+        throw err;
+      }
+      await Case.updateOne(
+        { _id: caseId, "comments._id": commentId },
+        { $addToSet: { "comments.$.ratedBy": userIdObj } },
+      );
       rated = true;
     }
-    await caseDoc.save();
+
+    // Compute average rating via aggregation from the Rating collection
+    const aggResult = await Rating.aggregate([
+      { $match: { commentId: commentIdObj } },
+      { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } },
+    ]);
+
+    const avgRating =
+      aggResult.length > 0 ? Math.round(aggResult[0].avg) : undefined;
+    const ratedByCount = aggResult.length > 0 ? aggResult[0].count : 0;
+
+    // Update denormalized rating in comment
+    await Case.updateOne(
+      { _id: caseId, "comments._id": commentId },
+      { $set: { "comments.$.rating": avgRating ?? null } },
+    );
+
     res.json({
       success: true,
       message: rated ? "Comment rated" : "Comment unrated",
-      data: { rating: comment.rating, ratedBy: comment.ratedBy.length, rated },
+      data: {
+        rating: avgRating,
+        ratedBy: ratedByCount,
+        rated,
+      },
     });
   },
 );

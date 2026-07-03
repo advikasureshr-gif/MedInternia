@@ -36,6 +36,7 @@ import PageHeader from "../components/layout/PageHeader";
 import EmptyState from "../components/layout/EmptyState";
 import { Briefcase } from "lucide-react";
 import RecentlyViewedInternships from "../components/RecentlyViewedInternships";
+import DeadlineCountdown from "../components/DeadlineCountdown";
 
 interface JobApplication {
   id: string;
@@ -233,6 +234,7 @@ export default function Jobs() {
                             <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                               <Chip label={j.status} color={j.status === 'Open' ? 'success' : 'default'} size="small" sx={{ fontWeight: 700 }} />
                               {j.salary && <Chip label={j.salary} size="small" variant="outlined" />}
+                              <DeadlineCountdown deadline={j.applicationDeadline} />
                             </Box>
 
                             <Divider sx={{ my: 2 }} />
@@ -410,3 +412,4 @@ export default function Jobs() {
     </Container>
   );
 }
+

@@ -20,6 +20,7 @@ import {
 import BookIcon from '@mui/icons-material/Book';
 import DatasetIcon from '@mui/icons-material/Dataset';
 import Image from 'next/image';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import WorkIcon from '@mui/icons-material/Work';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -30,6 +31,7 @@ import ProfileDropdown from './ProfileDropdown';
 import NotificationBell from './NotificationBell';
 import SearchIcon from '@mui/icons-material/Search';
 import ArticleIcon from '@mui/icons-material/Article';
+import HelpIcon from '@mui/icons-material/Help';
 import CloseIcon from '@mui/icons-material/Close';
 
 import { getCurrentUserRole } from '../utils/permissions';
@@ -192,6 +194,7 @@ export default function Navbar({ route }: { route?: string }) {
     { href: '/jobs', icon: <WorkIcon />, label: 'Jobs' },
     { href: '/webinars', icon: <VideocamIcon />, label: 'Webinars' },
     { href: '/research_paper', icon: <ArticleIcon />, label: 'Research Paper' },
+    { href: '/faq', icon: <HelpIcon />, label: 'FAQ' },
   ];
 
   const mobileNavItems = [
@@ -202,6 +205,7 @@ export default function Navbar({ route }: { route?: string }) {
     { href: '/webinars', icon: <VideocamIcon />, label: 'Webinars' },
     { href: '/research_paper', icon: <ArticleIcon />, label: 'Research Paper' },
     { href: '/diaries', icon: <BookIcon />, label: 'Diaries' },
+    { href: '/faq', icon: <HelpIcon />, label: 'FAQ' },
   ];
 
   const searchBar = (
@@ -469,6 +473,7 @@ export default function Navbar({ route }: { route?: string }) {
               Medical learning & collaboration
             </Typography>
           </Box>
+
         </Box>
       </Drawer>
     </>

@@ -1,4 +1,4 @@
-import { sendOtp, verifyOtp, forgotPassword, resetPassword, uploadProfilePicture } from '../controllers/authController';
+import { sendOtp, verifyOtp, forgotPassword, resetPassword, uploadProfilePicture, logout } from '../controllers/authController';
 import { Router } from 'express';
 import {
   register,
@@ -39,6 +39,7 @@ router.post('/register', registerLimiter, register);
 router.post('/login', loginLimiter, login);
 
 // Protected routes (require authentication)
+router.post('/logout', authenticate, logout);
 router.get('/profile', authenticate, getProfile);
 // Profile image upload
 router.post(
