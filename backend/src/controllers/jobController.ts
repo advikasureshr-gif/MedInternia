@@ -297,21 +297,57 @@ export const checkJobEligibility = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Apply to job (increment application count)
+// Apply to job (records applicant identity, prevents duplicate applications)
 export const applyToJob = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req.user!._id as any).toString();
 
-    const jobOpportunity = await JobOpportunity.findByIdAndUpdate(
-      id,
-      { $inc: { applications: 1 } },
+    // 1. Fetch the requested job and validate it exists.
+    const existingJob = await JobOpportunity.findById(id);
+
+    if (!existingJob) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job opportunity not found'
+      });
+    }
+
+    // 2. Prevent duplicate applications (fast-path check for a clean 409
+    //    message; the atomic update below is what actually enforces this
+    //    under concurrent requests).
+    const alreadyApplied = existingJob.applicants.some(
+      (applicant) => applicant.user.toString() === userId
+    );
+
+    if (alreadyApplied) {
+      return res.status(409).json({
+        success: false,
+        message: 'You have already applied to this job.'
+      });
+    }
+
+    // 3 & 4. Store applicant info and increment the count in a single
+    //    atomic operation. The filter re-checks 'applicants.user' is not
+    //    already present, so concurrent duplicate requests from the same
+    //    user cannot both succeed — only one can match this condition.
+    const jobOpportunity = await JobOpportunity.findOneAndUpdate(
+      {
+        _id: id,
+        'applicants.user': { $ne: userId }
+      },
+      {
+        $push: { applicants: { user: userId, appliedAt: new Date() } },
+        $inc: { applications: 1 }
+      },
       { new: true }
     ).populate('postedBy', 'firstName lastName specialization');
 
     if (!jobOpportunity) {
-      return res.status(404).json({
+      // Lost the race to a concurrent request from the same user.
+      return res.status(409).json({
         success: false,
-        message: 'Job opportunity not found'
+        message: 'You have already applied to this job.'
       });
     }
 
@@ -327,6 +363,7 @@ export const applyToJob = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // 5. Return the updated job information exactly as before.
     res.json({
       success: true,
       message: 'Application recorded successfully',
