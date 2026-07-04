@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { getGlobalToken } from '../context/AuthContext';
 
+// Maintain backward compatibility for files importing getAuthToken
+export const getAuthToken = (): string | null => getGlobalToken();
+
 const ensureApiPath = (baseUrl: string): string => {
   const normalized = baseUrl.replace(/\/+$/, '');
   return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
