@@ -931,7 +931,7 @@ export const toggleLike = asyncHandler(
   },
 );
 
-// Get cases by current doctor
+// Get cases created by the current case owner
 export const getMyCases = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
@@ -940,8 +940,8 @@ export const getMyCases = asyncHandler(
       throw new AppError("User not authenticated", 401);
     }
 
-    if (user.userType !== "doctor") {
-      throw new AppError("Only doctors can view their cases", 403);
+    if (user.userType !== "doctor" && user.userType !== "patient") {
+      throw new AppError("Only doctors and patients can view their cases", 403);
     }
 
     const { page = 1, limit = 10 } = req.query;
