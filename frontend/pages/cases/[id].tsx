@@ -26,6 +26,10 @@ import { MessageCircleReply, Pin, CheckCircle2, Sparkles } from 'lucide-react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import GlossaryText from '../../components/GlossaryText';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -597,7 +601,7 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
                   Clinical History & Details
                 </Typography>
                 <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: 'text.primary', fontSize: '1.05rem', lineHeight: 1.7 }}>
-                  {caseData.description}
+                  <GlossaryText text={caseData.description} />
                 </Typography>
               </Box>
 
