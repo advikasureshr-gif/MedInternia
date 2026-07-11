@@ -214,7 +214,7 @@ export const getDesignTokens = (mode: PaletteMode) => ({
     },
     MuiTextField: {
       defaultProps: {
-        variant: 'outlined',
+        variant: 'outlined' as const,
       },
       styleOverrides: {
         root: {
