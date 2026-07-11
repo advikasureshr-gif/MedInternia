@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Stethoscope, Rocket, Sparkles, Image as ImageIcon, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Stethoscope, Rocket, Sparkles, Image as ImageIcon, Loader2, PenTool } from "lucide-react";
 import {
   Container,
   Typography,
@@ -24,6 +24,7 @@ import { Close as CloseIcon } from "@mui/icons-material";
 import api from "../../utils/api";
 import { useRouter } from "next/router";
 import PageHeader from "../../components/layout/PageHeader";
+import * as markerjs2 from "markerjs2";
 import { Menu } from "@mui/material";
 
 const SOAP_TEMPLATE = `**Subjective:**
@@ -95,9 +96,56 @@ export default function CreateCase() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  const [annotatingIdx, setAnnotatingIdx] = useState<number | null>(null);
+  const annotationImgRef = useRef<HTMLImageElement>(null);
   const [templateMenuAnchor, setTemplateMenuAnchor] = useState<null | HTMLElement>(null);
 
   const router = useRouter();
+
+  // Initialize markerjs2 when annotatingIdx is set
+  useEffect(() => {
+    if (annotatingIdx !== null && annotationImgRef.current) {
+      const markerArea = new markerjs2.MarkerArea(annotationImgRef.current);
+      
+      markerArea.addEventListener("render", async (event) => {
+        setLoading(true);
+        try {
+          const blob = await (await fetch(event.dataUrl)).blob();
+          const file = new File([blob], "annotated_image.png", { type: "image/png" });
+          const formData = new FormData();
+          formData.append("attachment", file);
+          const token = localStorage.getItem("token");
+          
+          const res = await api.post("/cases/attachments", formData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          });
+          
+          const newAttachment = res.data.data;
+          setAttachments((prev) => {
+            const newAtts = [...prev];
+            newAtts[annotatingIdx] = newAttachment;
+            return newAtts;
+          });
+        } catch (err: any) {
+          setError(err?.response?.data?.message || "Failed to save annotated image.");
+        } finally {
+          setLoading(false);
+          setAnnotatingIdx(null);
+        }
+      });
+
+      markerArea.addEventListener("close", () => {
+        setAnnotatingIdx(null);
+      });
+
+      markerArea.show();
+    }
+  }, [annotatingIdx]);
+
+  const routerRef = useRef(router);
 
   // Cycle through loading steps to show the AI tagger progress
   useEffect(() => {
@@ -484,6 +532,22 @@ export default function CreateCase() {
                             {att.type === 'video' ? 'Video File' : 'Audio File'}
                           </Typography>
                         )}
+                        {att.type === 'image' && (
+                          <IconButton
+                            size="small"
+                            sx={{
+                              position: "absolute",
+                              bottom: 4,
+                              right: 4,
+                              bgcolor: "rgba(0,0,0,0.5)",
+                              color: "white",
+                              "&:hover": { bgcolor: "rgba(0,0,0,0.7)" },
+                            }}
+                            onClick={() => setAnnotatingIdx(idx)}
+                          >
+                            <PenTool size={16} />
+                          </IconButton>
+                        )}
                         <IconButton
                           size="small"
                           sx={{
@@ -599,6 +663,32 @@ export default function CreateCase() {
           }
         `}</style>
       </Backdrop>
+      
+      {/* Invisible image element strictly for markerjs2 to attach to */}
+      {annotatingIdx !== null && attachments[annotatingIdx] && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(0,0,0,0.8)'
+          }}
+        >
+          <img 
+            ref={annotationImgRef} 
+            src={attachments[annotatingIdx].url} 
+            crossOrigin="anonymous" 
+            alt="Annotation Target"
+            style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }}
+          />
+        </Box>
+      )}
     </Box>
   );
 }
