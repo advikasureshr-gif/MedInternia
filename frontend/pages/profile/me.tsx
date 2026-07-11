@@ -19,6 +19,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SchoolIcon from '@mui/icons-material/School';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import Link from 'next/link';
 import api from '../../utils/api';
 
@@ -296,6 +297,41 @@ export default function MeProfilePage() {
               </Stack>
             </Stack>
           </Card>
+
+          {/* Publications */}
+          {user.publications && user.publications.length > 0 && (
+            <Card sx={{ p: 3, borderRadius: 4, mt: 4, border: '1px solid #e3eafc', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                Publications ({user.publications.length})
+              </Typography>
+              <Stack spacing={2}>
+                {user.publications.map((pub: any, index: number) => (
+                  <Box key={index} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={600} color="primary">
+                      {pub.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {pub.journal} • {pub.year}
+                    </Typography>
+                    {pub.url && (
+                      <Button
+                        variant="text"
+                        color="secondary"
+                        size="small"
+                        component="a"
+                        href={pub.url}
+                        target="_blank"
+                        startIcon={<MenuBookIcon />}
+                        sx={{ mt: 1, textTransform: 'none' }}
+                      >
+                        View Paper
+                      </Button>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </Card>
+          )}
         </Grid>
       </Grid>
     </Box>
