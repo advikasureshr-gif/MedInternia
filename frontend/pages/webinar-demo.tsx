@@ -45,21 +45,18 @@ export default function WebinarTranscriptDemo() {
           <Grid size={{ xs: 12, lg: 8 }}>
             <Paper elevation={0} sx={{ 
               borderRadius: 4, overflow: 'hidden', bgcolor: 'black', 
-              position: 'relative', aspectRatio: '16/9', display: 'flex', 
-              alignItems: 'center', justifyContent: 'center' 
+              position: 'relative', aspectRatio: '16/9'
             }}>
-              <Box sx={{ textAlign: 'center', color: 'white' }}>
-                <PlayCircleOutlineIcon sx={{ fontSize: 80, opacity: 0.8, cursor: 'pointer', '&:hover': { opacity: 1 } }} />
-                <Typography variant="subtitle1" sx={{ mt: 2, fontWeight: 600 }}>Click to Play Video</Typography>
-              </Box>
-              
-              {/* Fake Video controls */}
-              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 2, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
-                <Box sx={{ height: 4, bgcolor: 'rgba(255,255,255,0.3)', borderRadius: 2, mb: 1 }}>
-                  <Box sx={{ height: '100%', width: '35%', bgcolor: 'primary.main', borderRadius: 2 }} />
-                </Box>
-                <Typography variant="caption" color="white" fontWeight={700}>15:25 / 45:00</Typography>
-              </Box>
+              <iframe
+                width="100%"
+                height="100%"
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0&rel=0"
+                title="Webinar Video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ position: 'absolute', top: 0, left: 0 }}
+              />
             </Paper>
             
             <Box sx={{ mt: 4 }}>
