@@ -432,7 +432,7 @@ export default function WebinarsPage() {
                             startIcon={<CalendarIcon size={14} />}
                             sx={{ borderRadius: 2, textTransform: 'none' }}
                           >
-                            Google
+                            Calendar
                           </Button>
                           <Button
                             variant="outlined"
