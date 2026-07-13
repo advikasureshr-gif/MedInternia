@@ -15,7 +15,7 @@ import { AppError } from "../utils/AppError";
 const OTP_TTL_MS = 10 * 60 * 1000; // OTP valid for 10 minutes
 const OTP_MAX_ATTEMPTS = 5; // after 5 wrong tries the OTP is invalidated
 
-const generateOtpCode = () => crypto.randomInt(100000, 1000000).toString();
+const generateOtpCode = () => crypto.randomInt(100000, 999999).toString();
 
 const issueOtp = async (email: string, purpose: 'signup' | 'reset') => {
   const otp = generateOtpCode();
