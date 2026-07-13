@@ -25,7 +25,7 @@ import api from '../../utils/api';
 import { useRouter } from 'next/router';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import AuthLayout, { AuthCard } from '../../components/auth/AuthLayout';
+import AuthLayout, { AuthCard, AuthBackLink } from '../../components/auth/AuthLayout';
 import { useAuth, setGlobalToken } from '../../context/AuthContext';
 
 
@@ -420,6 +420,7 @@ export default function Register() {
             },
           }}
         >
+          <AuthBackLink />
           <Typography variant="h4" fontWeight={800} color="primary.main" gutterBottom align="center">
             Create Account
           </Typography>
