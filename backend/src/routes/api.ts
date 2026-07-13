@@ -9,6 +9,7 @@ import caseRoutes from './cases';
 import enhancedRoutes from './enhanced';
 import badgeRoutes from './badges';
 import peerReviewRoutes from './peerReviews';
+import mentorshipRoutes from './mentorship';
 import jobRoutes from './jobs';
 import certificateRoutes from './certificates';
 import webinarRoutes from './webinars';
@@ -18,6 +19,10 @@ import notificationRoutes from './notifications';
 import diseaseInsightRoutes from './diseaseInsights';
 import symptomRoutes from './symptoms';
 import diaryRoutes from "./diary";
+import messageRoutes from './messageRoutes';
+import flashcardRoutes from './flashcards';
+import collectionRoutes from './collections';
+import learningPathRoutes from './learningPaths';
 const router = Router();
 
 router.get('/', (req: Request, res: Response) => {
@@ -72,6 +77,7 @@ router.use('/cases', caseRoutes);
 router.use('/ai-disease-insights', diseaseInsightRoutes);
 router.use('/badges', badgeRoutes);
 router.use('/peer-reviews', peerReviewRoutes);
+router.use('/mentorship', mentorshipRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/certificates', certificateRoutes);
 router.use('/webinars', webinarRoutes);
@@ -81,5 +87,9 @@ router.use('/symptoms', symptomRoutes);
 router.use('/', enhancedRoutes);
 router.use('/research-papers', researchPaperRoutes);
 router.use("/diaries", diaryRoutes);
+router.use('/messages', messageRoutes);
+router.use('/flashcards', flashcardRoutes);
+router.use('/collections', collectionRoutes);
+router.use('/learning-paths', learningPathRoutes);
 
 export default router;
