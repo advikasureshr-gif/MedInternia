@@ -6,6 +6,9 @@ export interface IUser extends Document {
   following?: mongoose.Types.ObjectId[];
   followers?: mongoose.Types.ObjectId[];
   solvedCases?: mongoose.Types.ObjectId[];
+  savedCases?: mongoose.Types.ObjectId[];
+  savedJobs?: mongoose.Types.ObjectId[];
+  savedWebinars?: mongoose.Types.ObjectId[];
   firstName: string;
   lastName: string;
   email: string;
@@ -103,6 +106,9 @@ const UserSchema = new Schema<IUser>({
   following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   solvedCases: [{ type: Schema.Types.ObjectId, ref: 'Case' }],
+  savedCases: [{ type: Schema.Types.ObjectId, ref: 'Case' }],
+  savedJobs: [{ type: Schema.Types.ObjectId, ref: 'JobOpportunity' }],
+  savedWebinars: [{ type: Schema.Types.ObjectId, ref: 'Webinar' }],
   firstName: {
     type: String,
     required: [true, 'First name is required'],

@@ -27,6 +27,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
+import BookmarkButton from '../../components/BookmarkButton';
 import GlossaryText from '../../components/GlossaryText';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Link from 'next/link';
@@ -487,6 +488,7 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
                 {caseData.title}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
+                <BookmarkButton itemType="case" itemId={caseData._id || id as string} />
                 <Button 
                   variant="outlined" 
                   size="small" 

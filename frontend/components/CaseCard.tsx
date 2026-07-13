@@ -7,6 +7,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import LockIcon from '@mui/icons-material/Lock';
 import {getCurrentUserRole} from "../utils/permissions";
+import BookmarkButton from './BookmarkButton';
 
 // Helper to get owner name from doctor field
 function getOwnerName(caseData: any) {
@@ -162,6 +163,7 @@ export default function CaseCard({ caseData, onOpenDiscussion, onReadMore, isExp
                 {starred ? <StarRoundedIcon fontSize="inherit" /> : <StarBorderRoundedIcon fontSize="inherit" />}
               </IconButton>
             </Tooltip>
+            <BookmarkButton itemType="case" itemId={caseData._id} />
           </Box>
         </Box>
 
