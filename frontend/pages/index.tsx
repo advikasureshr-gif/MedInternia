@@ -1,3 +1,4 @@
+import { getAuthToken } from "../utils/api";
 import React from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
@@ -454,8 +455,11 @@ export default function HomePage() {
   const [waitlistEmail, setWaitlistEmail] = React.useState('');
   const [waitlistSubmitted, setWaitlistSubmitted] = React.useState(false);
 
+  // Needed by the feature cards below, and also by the hero mouse-parallax setup.
+  const shouldReduceMotion = useReducedMotion();
+
   React.useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? getAuthToken() : null;
     setIsLoggedIn(!!token);
   }, []);
 
@@ -485,29 +489,11 @@ export default function HomePage() {
     },
   };
 
-  const featureCardSx = {
-    p: 4,
-    borderRadius: '24px',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    bgcolor: '#fff',
-    border: '1px solid #e2e8f0',
-    transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      borderColor: '#0072ff',
-      boxShadow: '0 12px 32px rgba(0, 114, 255, 0.1)',
-      '& .explore-underline': { width: '100%' },
-    },
-  };
-
   // ---- Hero mouse-parallax setup ----
   // Tracks pointer position within the hero section (normalized -0.5..0.5)
   // and drives a handful of differently-weighted transforms so background,
   // video, and floating cards each drift a slightly different amount.
   const heroRef = React.useRef<HTMLDivElement | null>(null);
-  const shouldReduceMotion = useReducedMotion();
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const springX = useSpring(mouseX, { stiffness: 60, damping: 20, mass: 0.4 });
@@ -548,17 +534,24 @@ export default function HomePage() {
         />
       </Head>
 
-      {/* Landing header */}
+      {/* Landing header / navbar layout - dynamically hidden if active session is detected */}
       <Box
         component="header"
         sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
           px: { xs: 2, md: 6 },
           py: 2,
-          display: 'flex',
+          display: isLoggedIn ? 'none' : 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          bgcolor: '#fff',
-          borderBottom: '1px solid rgba(0,0,0,0.04)',
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(0,0,0,0.05)',
+          zIndex: 1100,
         }}
       >
         <Box
@@ -634,6 +627,9 @@ export default function HomePage() {
         </Box>
       </Box>
 
+      {/* Layout Spacer Box - only active if not logged in to clear fixed header bounds */}
+      {!isLoggedIn && <Box sx={{ height: 72 }} />}
+
       {/* Mobile nav drawer */}
       <Drawer
         anchor="right"
@@ -679,7 +675,7 @@ export default function HomePage() {
         <HeroBackground parallaxX={bgParallaxX} parallaxY={bgParallaxY} />
 
         <Container maxWidth="xl" sx={{ pt: { xs: 6, md: 12 }, pb: { xs: 8, md: 12 }, position: 'relative', zIndex: 1 }}>
-          <Grid container spacing={6} alignItems="center">
+          <Grid container spacing={6} aria-label="Hero contents layout layout container grid" alignItems="center">
             <Grid size={{ xs: 12, md: 6 }}>
               <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
                 {/* Eyebrow: slides in from the left, sets the "vitals monitor" tone */}
@@ -941,11 +937,59 @@ export default function HomePage() {
               .filter((item) => !item.authRequired || isLoggedIn)
               .map((item, i) => (
                 <Grid size={{ xs: 12, sm: 6, md: isLoggedIn ? 3 : 4 }} key={i}>
-                  <motion.div variants={fadeInUp} style={{ height: '100%' }}>
-                    <Paper elevation={0} sx={featureCardSx}>
-                      <Box sx={{ bgcolor: item.color, width: 64, height: 64, borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+                  <motion.div
+                    variants={fadeInUp}
+                    style={{ height: '100%' }}
+                    whileHover={
+                      shouldReduceMotion
+                        ? undefined
+                        : { y: -10, scale: 1.035, transition: { duration: 0.25, ease: 'easeOut' } }
+                    }
+                  >
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 4,
+                        borderRadius: '24px',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: '#fff',
+                        border: '1px solid #e2e8f0',
+                        transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
+                        '&:hover': {
+                          borderColor: '#0072ff',
+                          boxShadow: '0 20px 45px rgba(0, 114, 255, 0.22)',
+                          '& .explore-underline': { width: '100%' },
+                          '& .explore-arrow': { transform: shouldReduceMotion ? 'none' : 'translateX(6px)' },
+                        },
+                      }}
+                    >
+                      <motion.div
+                        className="feature-icon-box"
+                        style={{
+                          backgroundColor: item.color,
+                          width: 64,
+                          height: 64,
+                          borderRadius: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginBottom: 24,
+                        }}
+                        whileHover={
+                          shouldReduceMotion
+                            ? undefined
+                            : {
+                                rotate: [0, -12, 10, -6, 0],
+                                scale: 1.12,
+                                transition: { duration: 0.55, ease: 'easeInOut' },
+                              }
+                        }
+                      >
                         {item.icon}
-                      </Box>
+                      </motion.div>
+
                       <Typography variant="h5" fontWeight={800} color="#1a202c" mb={1.5}>
                         {item.title}
                       </Typography>
@@ -965,7 +1009,7 @@ export default function HomePage() {
                           paddingBottom: 2,
                         }}
                       >
-                        Explore <ChevronRight size={18} style={{ marginLeft: 4 }} />
+                        Explore <ChevronRight className="explore-arrow" size={18} style={{ marginLeft: 4, transition: 'transform 0.25s ease' }} />
                         <Box
                           className="explore-underline"
                           sx={{

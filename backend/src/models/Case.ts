@@ -30,6 +30,11 @@ export interface ICase extends Document {
   diagnosis?: string;
   treatment?: string;
   images?: string[];
+  attachments?: {
+    url: string;
+    type: 'image' | 'video' | 'audio';
+    publicId?: string;
+  }[];
   tags: string[];
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   specialization: string;
@@ -37,6 +42,7 @@ export interface ICase extends Document {
   comments: IComment[];
   likes: mongoose.Types.ObjectId[];
   isActive: boolean;
+  isRareDisease?: boolean;
   isPatientCase: boolean; // True if posted by patient
   moderationStatus: 'pending' | 'approved' | 'rejected' | 'changes_requested';
   moderationReason?: string;
@@ -50,6 +56,7 @@ export interface ICase extends Document {
   }[];
   pointsAwarded: number; // Points given to doctor for posting
   canRepost: boolean; // Indicates if the case can be reposted
+  verifiedDoctorsOnly: boolean; // Restrict visibility to Verified Doctors
   followUps: {
     author: mongoose.Types.ObjectId;
     content: string;
@@ -57,6 +64,15 @@ export interface ICase extends Document {
     images?: string[];
     createdAt: Date;
   }[];
+
+  entities?: {
+  text: string;
+  label: string;
+  score: number;
+  start: number;
+  end: number;
+}[];
+
   aiSuggestions?: {
     suggestedCases: mongoose.Types.ObjectId[];
     relevanceScore: number;
@@ -169,6 +185,11 @@ const CaseSchema = new Schema<ICase>({
     type: String,
     trim: true
   }],
+  attachments: [{
+    url: { type: String, required: true },
+    type: { type: String, enum: ['image', 'video', 'audio'], required: true },
+    publicId: { type: String }
+  }],
   tags: [{
     type: String,
     trim: true,
@@ -197,6 +218,10 @@ const CaseSchema = new Schema<ICase>({
   isActive: {
     type: Boolean,
     default: true
+  },
+  isRareDisease: {
+    type: Boolean,
+    default: false
   },
   isPatientCase: {
     type: Boolean,
@@ -244,10 +269,14 @@ const CaseSchema = new Schema<ICase>({
     default: 0,
     min: [0, 'Points awarded cannot be negative']
   },
-    canRepost: {
-      type: Boolean,
-      default: false
-    },
+  canRepost: {
+    type: Boolean,
+    default: false
+  },
+  verifiedDoctorsOnly: {
+    type: Boolean,
+    default: false
+  },
   followUps: [{
     author: {
       type: Schema.Types.ObjectId,
@@ -274,6 +303,23 @@ const CaseSchema = new Schema<ICase>({
       default: Date.now
     }
   }],
+  entities: [{
+  text: {
+    type: String
+  },
+  label: {
+    type: String
+  },
+  score: {
+    type: Number
+  },
+  start: {
+    type: Number
+  },
+  end: {
+    type: Number
+  }
+}],
   aiSuggestions: {
     suggestedCases: [{
       type: Schema.Types.ObjectId,
