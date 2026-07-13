@@ -34,15 +34,6 @@ export const registerLimiter = rateLimit({
   message: { success: false, message: 'Too many registration attempts. Please try again after an hour.' }
 });
 
-export const uploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 15, // 15 uploads per hour per user
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    return (req as any).user?._id?.toString() || req.ip;
-  },
-  message: { success: false, message: 'Too many file uploads. Please try again after an hour.' }
 export const chatbotLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,

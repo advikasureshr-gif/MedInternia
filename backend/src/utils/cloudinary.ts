@@ -40,7 +40,7 @@ export const uploadProfileImage = async (
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: 'medinternia/profile-pictures',
-        public_id: `profile-${userId}`,
+        public_id: `profile-${userId}-${Date.now()}`,
         overwrite: true,
         resource_type: 'image',
         transformation: [

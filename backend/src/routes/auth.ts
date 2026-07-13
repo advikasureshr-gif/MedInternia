@@ -9,7 +9,7 @@ import {
   syncOrcidPublications
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
-import { otpRequestLimiter, otpVerifyLimiter, loginLimiter, registerLimiter, uploadLimiter } from '../middleware/otpRateLimiter';
+import { otpRequestLimiter, otpVerifyLimiter, loginLimiter, registerLimiter } from '../middleware/otpRateLimiter';
 import multer from 'multer';
 import { isAllowedUpload } from '../utils/uploadValidation';
 
@@ -50,7 +50,6 @@ router.get('/profile', authenticate, getProfile);
 router.post(
   '/profile/upload-picture',
   authenticate,
-  uploadLimiter,
   upload.single('profilePicture'),
   uploadProfilePicture
 );

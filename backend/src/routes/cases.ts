@@ -34,7 +34,6 @@ import {
 } from '../controllers/caseController';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
-import { uploadLimiter } from '../middleware/otpRateLimiter';
 import multer from 'multer';
 import { isAllowedCaseAttachment } from '../utils/uploadValidation';
 
@@ -64,7 +63,7 @@ router.get('/comments/moderation/queue', authenticate, requirePermission('commen
 router.get('/ai-posts/my', authenticate, getMyAICaseSchedules);
 
 // Upload Case Attachment
-router.post('/attachments', authenticate, uploadLimiter, upload.single('attachment'), uploadAttachment);
+router.post('/attachments', authenticate, upload.single('attachment'), uploadAttachment);
 
 // Permission-guarded case management routes
 router.post('/', authenticate, requirePermission('case:create'), createCase);
