@@ -6,8 +6,9 @@ import {
 import api from '../../utils/api';
 import { BookOpen, Award, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/router';
+import { withAuth } from '../../components/withAuth'; 
 
-export default function LearningPathsDashboard() {
+function LearningPathsDashboard() {
   const [paths, setPaths] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -169,3 +170,4 @@ export default function LearningPathsDashboard() {
     </>
   );
 }
+export default withAuth(LearningPathsDashboard); 

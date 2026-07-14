@@ -7,8 +7,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import TranscriptIcon from '@mui/icons-material/DescriptionOutlined';
 import Navbar from '../components/Navbar';
+import { withAuth } from '../components/withAuth'; 
 
-export default function WebinarTranscriptDemo() {
+ function WebinarTranscriptDemo() {
   const [search, setSearch] = useState('');
 
   const transcript = [
@@ -130,3 +131,5 @@ export default function WebinarTranscriptDemo() {
     </Box>
   );
 }
+export default withAuth(WebinarTranscriptDemo);   
+

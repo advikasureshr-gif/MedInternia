@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { FaPlusCircle, FaBookOpen, FaMedal } from 'react-icons/fa';
 import Image from 'next/image';
 import { getInternProfile, getInternCredits, getDiaries, createDiary, addDiaryEntry } from '../../utils/api';
+import { withAuth } from '../../components/withAuth'; 
 
 // Type definitions
 type InternProfile = {
@@ -391,4 +392,4 @@ setSelectedDiary(normalizedDiary);
     );
 };
 
-export default DiariesPage;
+export default withAuth(DiariesPage);
