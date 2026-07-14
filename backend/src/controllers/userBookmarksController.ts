@@ -1,14 +1,24 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import User from '../models/User';
 import mongoose from 'mongoose';
+import { AuthRequest } from '../middleware/auth';
+
+const canAccessSavedItems = (req: AuthRequest, userId: string): boolean => {
+  const requesterId = (req.user?._id as any)?.toString();
+  return requesterId === userId || req.user?.userType === 'admin';
+};
 
 // Toggle a bookmark for a specific item
-export const toggleBookmark = async (req: Request, res: Response) => {
+export const toggleBookmark = async (req: AuthRequest, res: Response) => {
   try {
     const { userId, itemType, itemId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+
+    if (!canAccessSavedItems(req, userId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to modify saved items for this user' });
     }
 
     const user = await User.findById(userId);
@@ -62,12 +72,16 @@ export const toggleBookmark = async (req: Request, res: Response) => {
   }
 };
 
-export const getSavedItems = async (req: Request, res: Response) => {
+export const getSavedItems = async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+
+    if (!canAccessSavedItems(req, userId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view saved items for this user' });
     }
 
     const user = await User.findById(userId)
