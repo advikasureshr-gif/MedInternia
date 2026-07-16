@@ -125,15 +125,8 @@ export default function Navbar({ route }: { route?: string }) {
   const { mode, toggleColorMode } = useContext(ThemeContext);
 
   const handleHomeNav = () => {
-    if (typeof window !== 'undefined') {
-      const token = getAuthToken();
-      if (token) {
-        router.push('/dashboard');
-        return;
-      }
-    }
-    router.push('/');
-  };
+  router.push('/landing');
+};
 
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const closeDrawer = () => setDrawerOpen(false);
