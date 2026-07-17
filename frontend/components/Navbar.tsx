@@ -17,6 +17,8 @@ import {
   ListItemIcon,
   ListItemText,
   CssBaseline,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import BookIcon from '@mui/icons-material/Book';
 import DatasetIcon from '@mui/icons-material/Dataset';
@@ -39,6 +41,7 @@ import HelpIcon from '@mui/icons-material/Help';
 import CloseIcon from '@mui/icons-material/Close';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { ThemeContext } from '../context/ThemeContext';
 import { useContext } from 'react';
 
@@ -140,6 +143,15 @@ export default function Navbar({ route }: { route?: string }) {
   const closeDrawer = () => setDrawerOpen(false);
   const toggleDrawer = (open: boolean) => () => setDrawerOpen(open);
 
+  const [anchorElMore, setAnchorElMore] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorElMore);
+  const handleMoreClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorElMore(event.currentTarget);
+  };
+  const handleMoreClose = () => {
+    setAnchorElMore(null);
+  };
+
   const [showSuggestions, setShowSuggestions] = React.useState(false);
   const [recentSearches] = React.useState<string[]>([
     'Cardiology',
@@ -233,23 +245,30 @@ export default function Navbar({ route }: { route?: string }) {
     }
   };
 
-  const navItems = [
+  const visibleNavItems = [
     ...(isLoggedIn
       ? [{ href: '/cases', icon: <FolderOpenIcon />, label: t('navbar.cases', 'Cases') }]
       : []),
+    { href: '/webinars', icon: <VideocamIcon />, label: t('navbar.webinars') },
+    { href: '/jobs', icon: <WorkIcon />, label: 'Jobs' },
+    { href: '/diaries', icon: <BookIcon />, label: 'Diaries' },
+    { href: '/research_paper', icon: <ArticleIcon />, label: 'Research Paper' },
+  ];
+
+  const overflowNavItems = [
     { href: '/webinar-demo', icon: <TranscriptIcon />, label: 'Webinar Transcripts' },
     { href: '/learning-paths', icon: <BookIcon />, label: t('navbar.learningPaths') },
     { href: '/patients', icon: <DatasetIcon />, label: t('navbar.patients') },
     { href: '/doctors', icon: <WorkIcon />, label: t('navbar.doctors') },
-    { href: '/diaries', icon: <BookIcon />, label: 'Diaries' },
     { href: '/upload-raw', icon: <DatasetIcon />, label: 'Upload Raw' },
-    { href: '/jobs', icon: <WorkIcon />, label: 'Jobs' },
-    { href: '/webinars', icon: <VideocamIcon />, label: t('navbar.webinars') },
     { href: '/flashcards', icon: <BookIcon />, label: 'Flashcards' },
     { href: '/mentorship', icon: <ArticleIcon />, label: 'Mentorship' },
-    { href: '/research_paper', icon: <ArticleIcon />, label: 'Research Paper' },
     { href: '/faq', icon: <HelpIcon />, label: 'FAQ' },
   ];
+
+  const isMoreActive = overflowNavItems.some(
+    (item) => router.pathname === item.href || router.pathname.startsWith(`${item.href}/`)
+  );
 
   const mobileNavItems = [
     ...(isLoggedIn
@@ -456,7 +475,7 @@ export default function Navbar({ route }: { route?: string }) {
 
           {!isMobile && isLoggedIn && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <NavButton
                   key={item.href}
                   href={item.href}
@@ -465,6 +484,77 @@ export default function Navbar({ route }: { route?: string }) {
                   isActive={router.pathname === item.href || router.pathname.startsWith(`${item.href}/`)}
                 />
               ))}
+
+              <Tooltip title="More" placement="bottom" arrow>
+                <IconButton
+                  color="inherit"
+                  aria-label="More navigation links"
+                  aria-controls={open ? 'more-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={open ? 'true' : undefined}
+                  onClick={handleMoreClick}
+                  sx={{
+                    mx: 0.25,
+                    p: 1.2,
+                    borderRadius: 2,
+                    backgroundColor: isMoreActive ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+                  }}
+                >
+                  <MoreHorizIcon />
+                </IconButton>
+              </Tooltip>
+
+              <Menu
+                id="more-menu"
+                anchorEl={anchorElMore}
+                open={open}
+                onClose={handleMoreClose}
+                MenuListProps={{
+                  'aria-labelledby': 'more-button',
+                }}
+                PaperProps={{
+                  sx: {
+                    minWidth: 200,
+                    borderRadius: 3,
+                    boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }
+                }}
+              >
+                {overflowNavItems.map((item) => {
+                  const isActive = router.pathname === item.href || router.pathname.startsWith(`${item.href}/`);
+                  return (
+                    <MenuItem
+                      key={item.href}
+                      component={Link}
+                      href={item.href}
+                      onClick={handleMoreClose}
+                      sx={{
+                        py: 1.2,
+                        px: 2,
+                        gap: 1.5,
+                        fontWeight: isActive ? 700 : 500,
+                        color: isActive ? 'primary.main' : 'text.primary',
+                        bgcolor: isActive ? 'rgba(0, 114, 255, 0.08)' : 'transparent',
+                        '&:hover': {
+                          bgcolor: isActive ? 'rgba(0, 114, 255, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                        },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', color: isActive ? 'primary.main' : 'text.secondary', mr: 1.5 }}>
+                        {item.icon}
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 'inherit' }}>
+                        {item.label}
+                      </Typography>
+                    </MenuItem>
+                  );
+                })}
+              </Menu>
+
               <NotificationBell />
             </Box>
           )}
