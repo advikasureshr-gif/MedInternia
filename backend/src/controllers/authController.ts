@@ -155,10 +155,14 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   if (typeof email !== 'string') {
     throw new AppError("Invalid email format", 400);
   }
+  const normalizedEmail = email.toLowerCase().trim();
+  if (!normalizedEmail) {
+    throw new AppError("Invalid email format", 400);
+  }
 
   try {
     const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET as string) as any;
-    if (decoded.email !== email || decoded.purpose !== 'signup') {
+    if (decoded.email !== normalizedEmail || decoded.purpose !== 'signup') {
       throw new AppError('Invalid email verification token', 400);
     }
   } catch (err) {
@@ -166,7 +170,6 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Check if user already exists
-  const normalizedEmail = email.toLowerCase().trim();
   const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
     throw new AppError("User with this email already exists", 400);
@@ -279,11 +282,14 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const sendOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ success: false, message: 'Email required' });
-  const otp = await issueOtp(email, 'signup');
+  if (typeof email !== 'string') return res.status(400).json({ success: false, message: 'Invalid email format' });
+  const normalizedEmail = email.toLowerCase().trim();
+  if (!normalizedEmail) return res.status(400).json({ success: false, message: 'Email required' });
+  const otp = await issueOtp(normalizedEmail, 'signup');
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
-      to: email,
+      to: normalizedEmail,
       subject: 'MedInternia Email Verification OTP',
       text: `Your OTP is: ${otp}. It will expire in 10 minutes.`
     });
@@ -300,13 +306,21 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   if (!email || !otp) {
     throw new AppError('Email and OTP required', 400);
   }
-    const result = await consumeOtp(email, 'signup', otp);
+    if (typeof email !== 'string') {
+      throw new AppError('Invalid email format', 400);
+    }
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!normalizedEmail) {
+      throw new AppError('Email and OTP required', 400);
+    }
+
+    const result = await consumeOtp(normalizedEmail, 'signup', otp);
     if (!result.valid) {
       throw new AppError(result.message || 'Invalid OTP', 400);
     }
 
     const verificationToken = jwt.sign(
-      { email, purpose: 'signup' },
+      { email: normalizedEmail, purpose: 'signup' },
       process.env.JWT_SECRET as string,
       { expiresIn: '30m' }
     );
