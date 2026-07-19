@@ -172,6 +172,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("User with this email already exists", 400);
   }
 
+  const publicSignupRoles = ["patient", "doctor", "intern"];
+  if (!publicSignupRoles.includes(userType)) {
+    throw new AppError("Invalid user type for self-service registration", 400);
+  }
+
   // Validate required fields based on user type
   if (userType === "doctor") {
     if (!specialization || !licenseNumber) {
