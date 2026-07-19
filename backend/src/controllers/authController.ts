@@ -55,14 +55,27 @@ const consumeOtp = async (
   const isMatch = await bcrypt.compare(submittedOtp, record.otpHash);
 
   if (!isMatch) {
-    record.attempts += 1;
-    await record.save();
+    // Atomic increment to avoid race conditions with concurrent verification attempts
+    const updated = await Otp.findOneAndUpdate(
+      { _id: record._id, attempts: { $lt: OTP_MAX_ATTEMPTS } },
+      { $inc: { attempts: 1 } },
+      { new: true }
+    );
+
+    const attemptsNow = updated ? updated.attempts : OTP_MAX_ATTEMPTS;
+
+    if (attemptsNow >= OTP_MAX_ATTEMPTS) {
+      await Otp.deleteOne({ _id: record._id });
+      return { valid: false, message: 'Too many incorrect attempts. Please request a new OTP.' };
+    }
+
     return { valid: false, message: 'Invalid OTP' };
   }
 
   await Otp.deleteOne({ _id: record._id });
   return { valid: true };
 };
+
 
 // Upload profile picture
 export const uploadProfilePicture = asyncHandler(
