@@ -185,6 +185,17 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("User with this email already exists", 400);
   }
 
+  // 2b. Restrict public self-service registration to non-privileged roles.
+  // admin, moderator and hospital_staff must be created through an
+  // administrative flow, never via the public /register endpoint.
+  const SELF_SERVICE_ROLES = ["patient", "doctor", "intern"];
+  if (!SELF_SERVICE_ROLES.includes(userType)) {
+    throw new AppError(
+      "Public registration is only allowed for patient, doctor, or intern accounts",
+      403,
+    );
+  }
+
   // 3. Validate required fields based on user type
   if (userType === "doctor") {
     if (!specialization || !licenseNumber) {
