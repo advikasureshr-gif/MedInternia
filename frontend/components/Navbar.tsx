@@ -34,6 +34,7 @@ import { useRouter } from 'next/router';
 import ProfileDropdown from './ProfileDropdown';
 import NotificationBell from './NotificationBell';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import SearchIcon from '@mui/icons-material/Search';
 import ArticleIcon from '@mui/icons-material/Article';
@@ -126,6 +127,7 @@ export default function Navbar({ route }: { route?: string }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const { mode, toggleColorMode } = useContext(ThemeContext);
+  const { isAuthenticated, userId: authUserId, user: authUser } = useAuth();
   const [mounted, setMounted] = React.useState(false);
 
   const handleHomeNav = () => {
@@ -167,44 +169,35 @@ export default function Navbar({ route }: { route?: string }) {
   const [firstName, setFirstName] = React.useState<string>('');
   const [lastName, setLastName] = React.useState<string>('');
   const [userType, setUserType] = React.useState<string>('');
-  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('userId');
-      return !!(token && userId);
-    }
-    return false;
-  });
+  const isLoggedIn = isAuthenticated;
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
   React.useEffect(() => {
-    const token = getAuthToken();
-    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-    if (!token || !userId) {
-      setIsLoggedIn(false);
+    if (!isAuthenticated || !authUserId) {
+      setProfileImageUrl(undefined);
+      setFirstName('');
+      setLastName('');
+      setUserType('');
       return;
     }
-    setIsLoggedIn(true);
 
     try {
-      const storedUserStr = localStorage.getItem('user');
-      if (storedUserStr) {
-        const storedUser = JSON.parse(storedUserStr);
-        setProfileImageUrl(storedUser.profilePicture || undefined);
-        setFirstName(storedUser.firstName || storedUser.name || '');
-        setLastName(storedUser.lastName || '');
-        setUserType(storedUser.userType || storedUser.role || '');
+      if (authUser) {
+        setProfileImageUrl(authUser.profilePicture || undefined);
+        setFirstName(authUser.firstName || authUser.name || '');
+        setLastName(authUser.lastName || '');
+        setUserType(authUser.userType || authUser.role || '');
       }
     } catch (e) {
-      console.error("Failed to parse user from localStorage", e);
+      console.error("Failed to read user from auth context", e);
     }
 
     import('../utils/api').then((apiModule) => {
       apiModule.default
-        .get(`/users/${userId}/profile`)
+        .get(`/users/${authUserId}/profile`)
         .then((res) => {
           const userData = res.data?.data?.user || res.data?.user || res.data;
           setProfileImageUrl(userData.profilePicture || undefined);
@@ -218,7 +211,7 @@ export default function Navbar({ route }: { route?: string }) {
           setLastName('');
         });
     });
-  }, [getAuthToken()]);
+  }, [isAuthenticated, authUserId, authUser]);
 
   if (!mounted) {
     return (
