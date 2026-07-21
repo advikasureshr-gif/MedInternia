@@ -10,8 +10,11 @@ import {
   Switch,
   Divider,
   Paper,
-  Button
+  Button,
+  TextField,
+  InputAdornment
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 
 export interface JobFiltersProps {
   specialties: string[];
@@ -22,6 +25,8 @@ export interface JobFiltersProps {
   onRemoteChange: (r: boolean) => void;
   visaSponsorship: boolean;
   onVisaChange: (v: boolean) => void;
+  location: string;
+  onLocationChange: (l: string) => void;
   onClear: () => void;
 }
 
@@ -39,6 +44,8 @@ export default function JobFilters({
   onRemoteChange,
   visaSponsorship,
   onVisaChange,
+  location,
+  onLocationChange,
   onClear
 }: JobFiltersProps) {
   
@@ -80,6 +87,27 @@ export default function JobFilters({
           />
         ))}
       </FormGroup>
+
+      <Divider sx={{ mb: 3 }} />
+
+      <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+        Location
+      </Typography>
+      <TextField
+        fullWidth
+        size="small"
+        placeholder="City, state, or country"
+        value={location}
+        onChange={(e) => onLocationChange(e.target.value)}
+        sx={{ mb: 3 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon fontSize="small" />
+            </InputAdornment>
+          ),
+        }}
+      />
 
       <Divider sx={{ mb: 3 }} />
 

@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import User, { IUser } from '../models/User';
 import Otp from '../models/Otp';
 import transporter from '../utils/mailer';
-import { generateToken, generateRefreshToken } from '../utils/jwt';
+import { generateToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { AuthRequest, blacklistToken } from '../middleware/auth';
 import { uploadProfileImage } from '../utils/cloudinary';
 import { asyncHandler } from "../utils/asyncHandler";
@@ -16,6 +16,11 @@ const OTP_TTL_MS = 10 * 60 * 1000; // OTP valid for 10 minutes
 const OTP_MAX_ATTEMPTS = 5; // after 5 wrong tries the OTP is invalidated
 
 const generateOtpCode = () => crypto.randomInt(100000, 999999).toString();
+
+// Normalize an email for storage/lookup/comparison so that casing and
+// surrounding whitespace never cause OTP lookup or token comparison to fail.
+const normalizeEmail = (value?: string): string =>
+  (value ?? "").toString().trim().toLowerCase();
 
 const issueOtp = async (email: string, purpose: 'signup' | 'reset') => {
   const otp = generateOtpCode();
@@ -145,15 +150,18 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     verificationToken,
   } = req.body;
 
+  // Normalize the submitted email (casing/whitespace) so it matches the value
+  // carried in the verification token and stored by the OTP flow.
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    throw new AppError("Invalid email format", 400);
+  }
+
   // 1. A verified signup token (issued by /verify-otp after real OTP verification)
   // is required — this replaces requiring a raw OTP directly on /register, since
   // that previously allowed accounts to be created with unowned/unverified emails.
   if (!verificationToken) {
     throw new AppError("Email verification is required to register", 400);
-  }
-  const normalizedEmail = email.toLowerCase().trim();
-  if (!normalizedEmail) {
-    throw new AppError("Invalid email format", 400);
   }
 
   let verifiedEmail: string;
@@ -162,7 +170,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
       email?: string;
       purpose?: string;
     };
-    if (!decoded?.email || decoded.purpose !== "signup" || decoded.email !== normalizedEmail) {
+    if (!decoded?.email || decoded.purpose !== "signup" || normalizeEmail(decoded.email) !== normalizedEmail) {
       throw new Error("invalid token payload");
     }
     verifiedEmail = decoded.email;
@@ -170,7 +178,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Invalid or expired verification token. Please verify your email again.", 400);
   }
 
-  if (verifiedEmail !== normalizedEmail) {
+  if (normalizeEmail(verifiedEmail) !== normalizedEmail) {
     throw new AppError("Verification token does not match the provided email", 400);
   }
 
@@ -178,6 +186,17 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
     throw new AppError("User with this email already exists", 400);
+  }
+
+  // 2b. Restrict public self-service registration to non-privileged roles.
+  // admin, moderator and hospital_staff must be created through an
+  // administrative flow, never via the public /register endpoint.
+  const SELF_SERVICE_ROLES = ["patient", "doctor", "intern"];
+  if (!SELF_SERVICE_ROLES.includes(userType)) {
+    throw new AppError(
+      "Public registration is only allowed for patient, doctor, or intern accounts",
+      403,
+    );
   }
 
   // 3. Validate required fields based on user type
@@ -273,6 +292,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   res.cookie('token', token, cookieOptions);
   res.cookie('auth_status', 'authenticated', { ...cookieOptions, httpOnly: false });
+  res.cookie('refresh_token', refreshToken, cookieOptions);
 
   res.status(201).json({
     success: true,
@@ -291,10 +311,8 @@ export const sendOtp = asyncHandler(async (req: Request, res: Response) => {
   if (!email) {
     throw new AppError('Email required', 400);
   }
-  if (typeof email !== 'string') {
-    throw new AppError('Invalid email format', 400);
-  }
-  const normalizedEmail = email.toLowerCase().trim();
+
+  const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) {
     throw new AppError('Email required', 400);
   }
@@ -319,14 +337,11 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   if (!email || !otp) {
     throw new AppError('Email and OTP required', 400);
   }
-  if (typeof email !== 'string') {
-    throw new AppError('Invalid email format', 400);
-  }
-  const normalizedEmail = email.toLowerCase().trim();
+
+  const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) {
     throw new AppError('Email and OTP required', 400);
   }
-
   const result = await consumeOtp(normalizedEmail, 'signup', otp);
   if (!result.valid) {
     throw new AppError(result.message || 'Invalid OTP', 400);
@@ -338,7 +353,7 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
     { expiresIn: '30m' }
   );
 
-  res.json({ success: true, verificationToken });
+  res.json({ success: true, verificationToken, email: normalizedEmail });
 });
 
 // Login user
@@ -413,6 +428,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   res.cookie('token', token, cookieOptions);
   res.cookie('auth_status', 'authenticated', { ...cookieOptions, httpOnly: false });
+  res.cookie('refresh_token', refreshToken, cookieOptions);
 
   res.json({
     success: true,
@@ -449,7 +465,7 @@ const ALLOWED_UPDATE_FIELDS = [
   'specialization', 'experience', 'qualifications',
   'medicalSchool', 'yearOfStudy', 'interests', 'mentorDoctor',
   'academicAchievements', 'careerGoals',
-  'emergencyContact', 'medicalHistory', 'allergies', 'messagePrivacy'
+  'emergencyContact', 'medicalHistory', 'allergies', 'messagePrivacy', 'preferredModel'
 ];
 
 // Update user profile
@@ -680,3 +696,57 @@ export const syncOrcidPublications = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError("Failed to sync ORCID publications. Please check your ORCID iD.", 500);
   }
 });
+
+// Issue a new access token from a valid refresh token without forcing the user
+// to log in again. The refresh token is sent as an HTTP-only cookie (set on
+// login/register) or, as a fallback, in the JSON body. This keeps sessions
+// alive past the short-lived access token expiry.
+export const refreshToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    const cookieToken = req.cookies?.refresh_token;
+    const bodyToken = req.body?.refreshToken;
+    const incomingRefreshToken = cookieToken || bodyToken;
+
+    if (!incomingRefreshToken) {
+      throw new AppError('Refresh token is required', 401);
+    }
+
+    const decoded = verifyRefreshToken(incomingRefreshToken);
+    if (!decoded) {
+      throw new AppError('Invalid or expired refresh token', 401);
+    }
+
+    const user = await User.findById(decoded.userId).select('-password');
+    if (!user) {
+      throw new AppError('User not found', 401);
+    }
+    if (!user.isActive) {
+      throw new AppError('Account is deactivated', 401);
+    }
+
+    const tokenPayload = {
+      userId: (user._id as any).toString(),
+      email: user.email,
+      userType: user.userType,
+    };
+    const newAccessToken = generateToken(tokenPayload);
+    const newRefreshToken = generateRefreshToken(tokenPayload);
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+    res.cookie('refresh_token', newRefreshToken, cookieOptions);
+
+    res.json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        token: newAccessToken,
+        refreshToken: newRefreshToken,
+      },
+    });
+  },
+);
