@@ -47,6 +47,7 @@ import { useContext } from 'react';
 
 import { getCurrentUserRole } from '../utils/permissions';
 import { getAuthToken } from "../utils/api";
+import { useScroll, useSpring, motion } from 'framer-motion';
 
 interface NavButtonProps {
   href: string;
@@ -286,6 +287,15 @@ export default function Navbar({ route }: { route?: string }) {
     { href: '/diaries', icon: <BookIcon />, label: 'Diaries' },
     { href: '/faq', icon: <HelpIcon />, label: 'FAQ' },
   ];
+
+  /* SCROLL PROGRESSBAR */
+  const { scrollYProgress } = useScroll();
+
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 120,
+    damping: 20,
+    restDelta: 0.001,
+  });
 
   const searchBar = (
     <Box sx={{ width: '100%', position: 'relative' }}>
@@ -575,6 +585,20 @@ export default function Navbar({ route }: { route?: string }) {
             />
           </Box>
         </Toolbar>
+        <motion.div
+          style={{
+            scaleX,
+            transformOrigin: "left",
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            width: "100%",
+            height: "3px",
+            background: "linear-gradient(90deg,#2563EB,#06B6D4,#3B82F6)",
+            boxShadow: "0 0 12px rgba(37,99,235,.45), 0 0 24px rgba(6,182,212,.25)",
+            zIndex: 1200,
+          }}
+        />
       </AppBar>
 
       <Toolbar
