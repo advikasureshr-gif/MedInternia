@@ -5,6 +5,11 @@ import JobOpportunity from '../models/JobOpportunity';
 import User from '../models/User';
 import UserBadge from '../models/UserBadge';
 
+const isInvalidPastDeadline = (deadline: unknown): boolean => {
+  const parsedDeadline = new Date(deadline as any);
+  return Number.isNaN(parsedDeadline.getTime()) || parsedDeadline <= new Date();
+};
+
 // Create job opportunity (doctors and admins only)
 export const createJobOpportunity = async (req: AuthRequest, res: Response) => {
   try {
@@ -28,6 +33,13 @@ export const createJobOpportunity = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({
         success: false,
         message: 'Only doctors or admins can post job opportunities'
+      });
+    }
+
+    if (isInvalidPastDeadline(applicationDeadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Application deadline must be a future date'
       });
     }
 
@@ -249,6 +261,13 @@ export const updateJobOpportunity = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({
         success: false,
         message: 'Job opportunity not found or you are not authorized to update it'
+      });
+    }
+
+    if (req.body.applicationDeadline !== undefined && isInvalidPastDeadline(req.body.applicationDeadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Application deadline must be a future date'
       });
     }
     
