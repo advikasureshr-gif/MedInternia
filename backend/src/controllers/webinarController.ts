@@ -733,6 +733,11 @@ export const askQuestion = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { question } = req.body;
+    const trimmedQuestion = typeof question === 'string' ? question.trim() : '';
+
+    if (!trimmedQuestion) {
+      return res.status(400).json({ success: false, message: 'Question is required' });
+    }
 
     const webinar = await Webinar.findById(id);
     if (!webinar) return res.status(404).json({ success: false, message: 'Webinar not found' });
@@ -744,7 +749,7 @@ export const askQuestion = async (req: AuthRequest, res: Response) => {
     }
 
     webinar.qna.push({
-      question,
+      question: trimmedQuestion,
       author: req.user!._id,
       upvotes: [],
       isAnswered: false,
