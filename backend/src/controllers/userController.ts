@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { AuthRequest } from '../middleware/auth';
+import { AuthRequest, blacklistToken } from '../middleware/auth';
 import User from '../models/User';
 import UserBadge from '../models/UserBadge';
 import Case from '../models/Case';
 import Certificate from '../models/Certificate';
 import { checkAndAwardAutoBadges } from './badgeController';
 import { extractTextFromBuffer, parseResumeText } from '../services/resumeParserService';
+import jwt from 'jsonwebtoken';
 
 // Define CaseSummary type for recentCases
 interface CaseSummary {
@@ -147,8 +148,9 @@ export const getUserProfile = async (req: AuthRequest, res: Response) => {
     if (!req.user || (String(req.user._id) !== userId && req.user.userType !== 'admin')) {
       return res.status(403).json({
         success: false,
-        message: 'Forbidden: cannot view other users\' profiles'
+        message: 'Forbidden: cannot view other users\'profiles'
       });
+     
     }
 
     const user = await User.findById(userId)
@@ -230,7 +232,10 @@ export const getUserProfile = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
+ export const getCurrentUserProfile = async (req: AuthRequest, res: Response) => {
+  req.params.userId = String(req.user!._id);
+  return getUserProfile(req, res);
+};
 const ALLOWED_UPDATE_FIELDS = [
   'firstName', 'lastName', 'phone', 'dateOfBirth', 'gender', 'address',
   'bio', 'profilePicture', 'linkedInProfile', 'githubProfile',
@@ -772,6 +777,59 @@ export const getPublicProfile = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Get public profile error:', error);
     res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Delete user account permanently
+export const deleteAccount = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const requestingUserId = (req.user!._id as any).toString();
+
+    // Users can only delete their own account
+    if (userId !== requestingUserId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete your own account'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Blacklist the current JWT so it cannot be reused after deletion
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const decoded = jwt.decode(token) as { exp?: number } | null;
+        const expiresAt = decoded?.exp
+          ? new Date(decoded.exp * 1000)
+          : new Date(Date.now() + 24 * 60 * 60 * 1000); // fallback: 24h from now
+        await blacklistToken(token, expiresAt);
+      } catch {
+        // Non-fatal — proceed with deletion even if blacklisting fails
+      }
+    }
+
+    // Delete the user document
+    await User.findByIdAndDelete(userId);
+
+    return res.json({
+      success: true,
+      message: 'Account deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    return res.status(500).json({
       success: false,
       message: 'Internal server error'
     });

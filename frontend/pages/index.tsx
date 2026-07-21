@@ -13,6 +13,7 @@ import {
   useSpring,
   useTransform,
   useReducedMotion,
+  useScroll,
 } from 'framer-motion';
 
 // Temporary JSX intrinsic elements typing for inline SVG usage in this file.
@@ -446,13 +447,13 @@ function GlowRippleButton({
         shouldReduceMotion
           ? undefined
           : {
-              boxShadow: [
-                '0 10px 24px rgba(0,114,255,0.28)',
-                '0 16px 40px rgba(0,114,255,0.48)',
-                '0 10px 24px rgba(0,114,255,0.28)',
-              ],
-              scale: [1, 1.02, 1],
-            }
+            boxShadow: [
+              '0 10px 24px rgba(0,114,255,0.28)',
+              '0 16px 40px rgba(0,114,255,0.48)',
+              '0 10px 24px rgba(0,114,255,0.28)',
+            ],
+            scale: [1, 1.02, 1],
+          }
       }
       transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 2 }}
       style={{ borderRadius: '14px', display: 'inline-block' }}
@@ -575,6 +576,15 @@ export default function HomePage() {
   const cardParallaxXInv = useTransform(springX, [-0.5, 0.5], [16, -16]);
   const cardParallaxYInv = useTransform(springY, [-0.5, 0.5], [16, -16]);
 
+  /* SCROLL PROGRESSBAR */
+  const { scrollYProgress } = useScroll();
+
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 120,
+    damping: 20,
+    restDelta: 0.001,
+  });
+
   return (
     <Box
       component="main"
@@ -687,6 +697,20 @@ export default function HomePage() {
             Sign Up
           </Button>
         </Box>
+        <motion.div
+          style={{
+            scaleX,
+            transformOrigin: "left",
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            width: "100%",
+            height: "3px",
+            background: "linear-gradient(90deg,#2563EB,#06B6D4,#3B82F6)",
+            boxShadow: "0 0 12px rgba(37,99,235,.45), 0 0 24px rgba(6,182,212,.25)",
+            zIndex: 1200,
+          }}
+        />
       </Box>
 
       {/* Layout Spacer Box - only active if not logged in to clear fixed header bounds */}
@@ -1054,10 +1078,10 @@ export default function HomePage() {
                           shouldReduceMotion
                             ? undefined
                             : {
-                                rotate: [0, -12, 10, -6, 0],
-                                scale: 1.12,
-                                transition: { duration: 0.55, ease: 'easeInOut' },
-                              }
+                              rotate: [0, -12, 10, -6, 0],
+                              scale: 1.12,
+                              transition: { duration: 0.55, ease: 'easeInOut' },
+                            }
                         }
                       >
                         {item.icon}

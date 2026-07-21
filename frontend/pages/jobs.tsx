@@ -52,6 +52,30 @@ interface JobApplication {
   appliedDate: string;
 }
 
+// Format a structured location object into a readable string.
+const formatJobLocation = (location: any): string => {
+  if (!location || typeof location !== 'object') {
+    return typeof location === 'string' ? location : 'Location not specified';
+  }
+  if (location.isRemote) return 'Remote';
+  const parts = [location.city, location.state, location.country]
+    .filter((p) => typeof p === 'string' && p.trim().length > 0);
+  return parts.length > 0 ? parts.join(', ') : 'Location not specified';
+};
+
+// Format a structured salary object into a readable range string.
+const formatJobSalary = (salary: any): string | null => {
+  if (!salary || typeof salary !== 'object') return null;
+  const { min, max, currency } = salary;
+  const cur = typeof currency === 'string' && currency.trim() ? currency : 'USD';
+  if (typeof min === 'number' && typeof max === 'number') {
+    return `${cur} ${min.toLocaleString()}-${max.toLocaleString()}`;
+  }
+  if (typeof min === 'number') return `${cur} ${min.toLocaleString()}+`;
+  if (typeof max === 'number') return `Up to ${cur} ${max.toLocaleString()}`;
+  return null;
+};
+
 const RecommendationsWidget = ({ recommendedJobs, setActiveTab }: any) => (
   <Card sx={{ borderRadius: 4, border: '1px solid #e3eafc', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
     <CardContent sx={{ p: 3 }}>
@@ -74,7 +98,7 @@ const RecommendationsWidget = ({ recommendedJobs, setActiveTab }: any) => (
                 {j.title}
               </Typography>
               <Typography variant="caption" display="block" color="text.secondary" sx={{ mb: 1.5 }}>
-                {j.location}
+                {formatJobLocation(j.location)}
               </Typography>
               <Button 
                 variant="outlined" 
@@ -114,6 +138,7 @@ export default function Jobs() {
   // Filter states
   const [filterSpecialty, setFilterSpecialty] = useState<string[]>([]);
   const [filterExperience, setFilterExperience] = useState<string>("");
+  const [filterLocation, setFilterLocation] = useState<string>("");
   const [filterRemote, setFilterRemote] = useState<boolean>(false);
   const [filterVisa, setFilterVisa] = useState<boolean>(false);
 
@@ -192,6 +217,7 @@ export default function Jobs() {
     if (filterExperience) params.maxExperience = filterExperience;
     if (filterRemote) params.isRemote = true;
     if (filterVisa) params.visaSponsorship = true;
+    if (filterLocation.trim()) params.location = filterLocation.trim();
 
     api
       .get("/jobs", { params })
@@ -213,7 +239,7 @@ export default function Jobs() {
         setOriginalJobs([]);
         setLoading(false);
       });
-  }, [authChecked, filterSpecialty, filterExperience, filterRemote, filterVisa, smartSearchActive]);
+  }, [authChecked, filterSpecialty, filterExperience, filterLocation, filterRemote, filterVisa, smartSearchActive]);
 
   useEffect(() => {
   if (!currentUserId) return;
@@ -238,7 +264,7 @@ export default function Jobs() {
         id: job._id,
         title: job.title,
         company: job.company || 'MedInternia Hospital Group',
-        location: job.location,
+        location: formatJobLocation(job.location),
         status: 'Applied',
         appliedDate: new Date().toLocaleDateString()
       };
@@ -322,9 +348,12 @@ export default function Jobs() {
                   onRemoteChange={setFilterRemote}
                   visaSponsorship={filterVisa}
                   onVisaChange={setFilterVisa}
+                  location={filterLocation}
+                  onLocationChange={setFilterLocation}
                   onClear={() => {
                     setFilterSpecialty([]);
                     setFilterExperience('');
+                    setFilterLocation('');
                     setFilterRemote(false);
                     setFilterVisa(false);
                   }}
@@ -422,7 +451,7 @@ export default function Jobs() {
                                   </Stack>
                                   <Stack direction="row" spacing={0.5} alignItems="center">
                                     <RoomIcon sx={{ fontSize: 18 }} />
-                                    <Typography variant="caption">{j.location}</Typography>
+                                    <Typography variant="caption">{formatJobLocation(j.location)}</Typography>
                                   </Stack>
                                 </Stack>
                               </Box>
@@ -452,7 +481,7 @@ export default function Jobs() {
                                   }}
                                 />
                               )}
-                              {j.salary && <Chip label={j.salary} size="small" variant="outlined" />}
+                              {formatJobSalary(j.salary) && <Chip label={formatJobSalary(j.salary)} size="small" variant="outlined" />}
                               <DeadlineCountdown deadline={j.applicationDeadline} />
                             </Box>
 
@@ -521,7 +550,7 @@ export default function Jobs() {
                                 <Typography variant="h6" fontWeight={700} color="primary">
                                   {j.title}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">{j.location}</Typography>
+                                <Typography variant="body2" color="text.secondary">{formatJobLocation(j.location)}</Typography>
                               </Box>
                               <BookmarkButton itemType="job" itemId={j._id} />
                             </Stack>

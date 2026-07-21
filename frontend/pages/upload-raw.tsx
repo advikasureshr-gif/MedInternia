@@ -845,4 +845,4 @@ function CaseDetailsDialog({ open, onClose, caseData }: { open: boolean; onClose
     </Box>
   );
 }
-export default UploadRawPage;
+export default withAuth(UploadRawPage);

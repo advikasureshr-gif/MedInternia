@@ -696,6 +696,19 @@ export const likeComment = asyncHandler(
     if (!user) throw new AppError("User not authenticated", 401);
 
     const userIdObj = new mongoose.Types.ObjectId(user._id!.toString());
+
+    // Verify the case and comment exist before mutating likes so we never
+    // report success for a missing case or comment.
+    const caseDoc = await Case.findOne(
+      { _id: getId(caseId), "comments._id": getId(commentId) },
+      { "comments.$": 1 }
+    );
+    if (!caseDoc) {
+      const caseExists = await Case.exists({ _id: getId(caseId) });
+      if (!caseExists) throw new AppError("Case not found", 404);
+      throw new AppError("Comment not found", 404);
+    }
+
     let liked = false;
     const pullResult = await Case.updateOne(
       { _id: getId(caseId), "comments._id": getId(commentId) },

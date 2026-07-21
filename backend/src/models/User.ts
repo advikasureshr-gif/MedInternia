@@ -84,6 +84,8 @@ passwordResetExpires?: Date;
   // Common fields
   isActive: boolean;
   isVerified: boolean;
+  // User-selected AI model used when calling the AI service
+  preferredModel?: string;
   messagePrivacy?: 'anyone' | 'verified_only' | 'none';
   createdAt: Date;
   updatedAt: Date;
@@ -360,6 +362,11 @@ passwordResetExpires: {
   isVerified: {
     type: Boolean,
     default: false
+  },
+  preferredModel: {
+    type: String,
+    enum: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gemini-1.5-pro', 'gemini-2.0-pro', 'claude-3.5-sonnet'],
+    default: 'gpt-3.5-turbo'
   },
   messagePrivacy: {
     type: String,
