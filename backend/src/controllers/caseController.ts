@@ -348,7 +348,7 @@ export const unpinComment = asyncHandler(async (req: AuthRequest, res: Response)
 });
 
 export const getPinnedComments = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const caseDoc = await Case.findById(getId(req.params.id));
+  const caseDoc = await Case.findById(getId(req.params.caseId));
   if (!caseDoc) throw new AppError("Case not found", 404);
   const pinned = caseDoc.comments.filter((c: any) => c.isPinned === true);
   res.json({ success: true, data: { comments: pinned } });
