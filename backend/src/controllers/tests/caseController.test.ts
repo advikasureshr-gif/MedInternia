@@ -77,7 +77,7 @@ describe("Case Controller", () => {
 
       const save = jest.fn().mockResolvedValue(undefined);
       const populate = jest.fn().mockResolvedValue(undefined);
-      (mockedCase as unknown as jest.Mock).mockImplementation(() => ({ save, populate }));
+      (mockedCase as unknown as jest.Mock).mockImplementation(() => ({ save, populate, _id: "patient-1" }));
       mockedUser.findByIdAndUpdate.mockResolvedValue({} as any);
 
       const next = jest.fn();

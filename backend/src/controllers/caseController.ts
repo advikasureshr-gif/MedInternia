@@ -828,7 +828,9 @@ export const createCase = asyncHandler(
       await newCase.save();
       await User.findByIdAndUpdate(user._id, { $inc: { points: 5 } });
 
-      ingestCase(newCase._id.toString(), `${title}\n${description}`, { specialization: spec, isPatientCase: true }).catch(console.error);
+      if (newCase._id) {
+        ingestCase(newCase._id.toString(), `${title}\n${description}`, { specialization: spec, isPatientCase: true }).catch(console.error);
+      }
 
       return res.status(201).json({ success: true, data: { case: newCase } });
     }
@@ -850,7 +852,9 @@ export const createCase = asyncHandler(
     await newCase.save();
     await User.findByIdAndUpdate(user._id, { $inc: { points: 10 } });
 
-    ingestCase(newCase._id.toString(), `${title}\n${description}`, { specialization: spec, isPatientCase: false }).catch(console.error);
+    if (newCase._id) {
+      ingestCase(newCase._id.toString(), `${title}\n${description}`, { specialization: spec, isPatientCase: false }).catch(console.error);
+    }
 
     res.status(201).json({ success: true, data: { case: newCase } });
   }
