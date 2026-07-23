@@ -1,4 +1,4 @@
-taskkill /PID 12345 /F# 🩺 MedInternia
+# 🩺 MedInternia
 
 <div align="center">
 
