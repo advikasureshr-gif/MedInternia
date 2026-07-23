@@ -349,7 +349,7 @@ export const unpinComment = asyncHandler(async (req: AuthRequest, res: Response)
 });
 
 export const getPinnedComments = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const caseDoc = await Case.findById(getId(req.params.id));
+  const caseDoc = await Case.findById(getId(req.params.caseId));
   if (!caseDoc) throw new AppError("Case not found", 404);
   const pinned = caseDoc.comments.filter((c: any) => c.isPinned === true);
   res.json({ success: true, data: { comments: pinned } });
@@ -865,9 +865,9 @@ export const getSimilarCases = asyncHandler(async (req: AuthRequest, res: Respon
   if (!caseDoc) {
     throw new AppError("Case not found", 404);
   }
-  
+
   const text = `${caseDoc.title}\n${caseDoc.description}`;
   const similar = await suggestCases(text, 3);
-  
+
   res.json({ success: true, data: { similarCases: similar } });
 });
